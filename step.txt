@@ -1,0 +1,10 @@
+1. install azure cli. https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?view=azure-cli-latest&pivots=winget
+2. "az login" to loign the cloud and choose a subscription.
+3. "az account show" to verify the account information.
+4. install terraform extension that developed by "Anton Kulikov", not offical one
+5. Azure provider document: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
+6. "terraform init" initialize backend to local.
+7. Show the plan: "terraform fmt", then "terraform plan"
+8. Apply the plan "terraform apply -auto approve"
+9. Check the current state: "terraform state list" "terraform state show 'resource name'"
+10. Destroy resource: "terraform plan -destroy"  "terraform apply -destroy"

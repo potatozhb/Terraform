@@ -1,0 +1,13 @@
+# Terraform provider and module cache
+.terraform/
+
+# Local state and backups
+*.tfstate
+*.tfstate.*
+
+# Local plans, secrets, and crash logs
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
