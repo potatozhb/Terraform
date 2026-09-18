@@ -5,6 +5,31 @@
 5. Azure provider document: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
 6. "terraform init" initialize backend to local.
 7. Show the plan: "terraform fmt", then "terraform plan"
-8. Apply the plan "terraform apply -auto approve"
+8. Apply the plan "terraform apply -auto-approve"
 9. Check the current state: "terraform state list" "terraform state show 'resource name'"
 10. Destroy resource: "terraform plan -destroy"  "terraform apply -destroy"
+
+11. Create key pair:
+    "ssh-keygen -t rsa"
+12. Use the public key into a VM key by "public_key = file("~/.ssh/key.pub)"
+13. After apply the change, try login the VM: "ssh -i ~/.ssh/id_rsa adminuser@168.62.x.x(VM public key)"
+    check status: "lsb_release -a"     exit command: "exit"
+
+14. Create Docker steps
+    create a new file, for example "customdata.tpl", tpl means temp file
+15. Paste the code into the file "customdata.tpl" to install all docker dependency into the machine>
+    #!/bin/bash
+    sudo apt-get update -y &&
+    sudo apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common &&
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - &&
+    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" &&
+    sudo apt-get update -y &&
+    sudo sudo apt-get install docker-ce docker-ce-cli containerd.io -y &&
+    sudo usermod -aG docker ubuntu
+
+16. Apply the change, get the new VM public IP, redo step 13, then check the docker version by "docker --version" to make sure it is installed success.
