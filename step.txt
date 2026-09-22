@@ -33,3 +33,40 @@
     sudo usermod -aG docker ubuntu
 
 16. Apply the change, get the new VM public IP, redo step 13, then check the docker version by "docker --version" to make sure it is installed success.
+
+//Remote ssh
+17. Install Remote - SSH extension
+18. View->Command Palatte->Remote-SSH:Add New SSH Host...
+19. Input "ssh admin@admin.com", hit enter button
+20. Click the first one "C:\Users\{user name}\.ssh\config, then open the config.
+
+21. Add template file like windows-ssh-script.tpl 
+    add-content -path c:/users/joezhao/.ssh/config -value @'
+
+    Host ${hostname}
+        HostName ${hostname}
+        User ${user}
+        IdentityFile ${identityfile}
+    '@
+
+    or linux-...
+    cat << EOF >> ~/.ssh/config
+
+    Host ${hostname}
+        HostName ${hostname}
+        User ${user}
+        IdentityFile ${identityfile} 
+    EOF
+22. Replace the resource: terraform apply -replace azurerm_linux_...mtc-vm
+23. Run command "ssh-keygen -R 168.62.60.12 -f "$env:USERPROFILE\.ssh\known_hosts" " to delete the cached hosts.
+
+24. If multiple deployment file, define data like this:
+    data "azurerm_public_ip" "mtc-public-ip" {
+        name                = azurerm_public_ip.mtc-public-ip.name
+        resource_group_name = azurerm_resource_group.mtc-rg.name
+    }
+
+25. Start terraform console toole by command: "terraform console"
+
+26. sudo apt update
+    sudo apt install -y curl wget tar ca-certificates libstdc++6

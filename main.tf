@@ -112,7 +112,7 @@ resource "azurerm_linux_virtual_machine" "mtc-vm" {
   name                = "mtc-vm"
   resource_group_name = azurerm_resource_group.mtc-rg.name
   location            = azurerm_resource_group.mtc-rg.location
-  size                = "Standard_B1s"
+  size                = "Standard_B2s"
   admin_username      = "adminuser"
   network_interface_ids = [
     azurerm_network_interface.mtc-nic.id,
@@ -132,12 +132,30 @@ resource "azurerm_linux_virtual_machine" "mtc-vm" {
 
   source_image_reference {
     publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "18.04-LTS"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts-gen2"
     version   = "latest"
+  }
+
+  provisioner "local-exec" {
+    command = templatefile("${var.host_os}-ssh-script.tpl", {
+      hostname = self.public_ip_address,
+      user = "adminuser",
+      identityfile = "~/.ssh/id_rsa"
+    })
+    interpreter = var.host_os == "windows" ? ["PowerShell", "-Command"] : ["bash", "-c"] //["bash", "-c"] for Linux
   }
 
   tags = {
     environment = "dev"
   }
+}
+
+data "azurerm_public_ip" "mtc-public-ip" {
+  name                = azurerm_public_ip.mtc-public-ip.name
+  resource_group_name = azurerm_resource_group.mtc-rg.name
+}
+
+output "public_ip_address" {
+  value = "${azurerm_public_ip.mtc-public-ip.name}: ${data.azurerm_public_ip.mtc-public-ip.ip_address}"
 }
