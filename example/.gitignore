@@ -11,6 +11,3 @@
 *.tfvars.json
 crash.log
 crash.*.log
-
-# Provider binaries copied outside the Terraform cache
-terraform-provider-*
