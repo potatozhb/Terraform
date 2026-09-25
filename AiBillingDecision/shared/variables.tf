@@ -6,6 +6,12 @@ variable "storage_account_name" {
   description = "Name of the storage account for the foundry project."
 }
 
+variable "storage_container_name" {
+  type        = string
+  default     = "foundry"
+  description = "Name of the storage container for the foundry project."
+}
+
 
 variable "resource_group_name" {
   type        = string
