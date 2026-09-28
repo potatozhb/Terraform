@@ -16,18 +16,9 @@ resource "azurerm_storage_container" "crc-storage-container" {
   container_access_type = "private"
 }
 
-
-output "storage_account_id" {
-  value = "${azurerm_storage_account.crc-storage.name}:${azurerm_storage_account.crc-storage.id}"
-}
-
-output "storage_container_id" {
-  value = "${azurerm_storage_container.crc-storage-container.name}:${azurerm_storage_container.crc-storage-container.id}"
-}
-
-output "storage_container_resource_id" {
-  description = "ARM resource ID of the container for role assignment scope."
-  value       = "${azurerm_storage_account.crc-storage.id}/blobServices/default/containers/${azurerm_storage_container.crc-storage-container.name}"
+output "azure_search_blob_storage_connection_string" {
+  value = azurerm_storage_account.crc-storage.primary_connection_string
+  sensitive = true
 }
 
 output "storage_account_name" {
@@ -49,4 +40,50 @@ resource "azurerm_storage_container" "function_deployments" {
 
 output "function_deployment_endpoint" {
   value = "${azurerm_storage_account.crc-storage.primary_blob_endpoint}${azurerm_storage_container.function_deployments.name}"
+}
+
+
+
+# Stable subscription suffix keeps the namespace name globally distinct.
+data "azurerm_client_config" "eventhubs" {}
+
+resource "azurerm_eventhub_namespace" "evhns-ClosedOrders" {
+  name                = var.eventhub_namespace_name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  sku                 = "Basic"
+  capacity            = 1
+  minimum_tls_version = "1.2"
+
+  tags = {
+    environment = "dev"
+  }
+}
+    
+resource "azurerm_eventhub" "closedOrders" {
+  name            = var.eventhub_name
+  namespace_id    = azurerm_eventhub_namespace.evhns-ClosedOrders.id
+  partition_count = 2
+
+  retention_description {
+    cleanup_policy          = "Delete"
+    retention_time_in_hours = 24
+  }
+}
+
+output "eventhub_namespace_id" {
+  value = azurerm_eventhub_namespace.evhns-ClosedOrders.id
+}
+
+output "eventhub_fully_qualified_namespace" {
+  value = "${azurerm_eventhub_namespace.evhns-ClosedOrders.name}.servicebus.windows.net"
+}
+
+output "eventhub_name" {
+  value = azurerm_eventhub.closedOrders.name
+}
+
+output "closed_order_eventhub_connection_string" {
+  value     = azurerm_eventhub_namespace.evhns-ClosedOrders.default_primary_connection_string
+  sensitive = true
 }

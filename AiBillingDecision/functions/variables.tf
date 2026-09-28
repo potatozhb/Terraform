@@ -26,3 +26,48 @@ variable "deployment_container_endpoint" {
   type        = string
   description = "Blob container URL for Flex Consumption deployment packages."
 }
+
+variable "search_api_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+variable "search_service_url" {
+  type    = string
+  default = ""
+}
+
+variable "foundry_api_key" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "foundry_service_url" {
+  type    = string
+  default = ""
+}
+
+variable "azure_search_blob_storage_connection_string" {
+  sensitive = true
+  type      = string
+  default   = ""
+}
+
+variable "sql_connection_string" {
+  sensitive = true
+  type      = string
+  default   = "Data Source=testdb.westus2.cloudapp.azure.com,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
+}
+
+variable "eventhub_connection_string" {
+  sensitive = true
+  type      = string
+  default   = ""
+}
+
+variable "eventhub_name" {
+  type        = string
+  default     = "closedorders"
+  description = "Name of the Event Hub."
+}

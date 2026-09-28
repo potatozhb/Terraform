@@ -24,3 +24,15 @@ variable "location" {
   default     = "Canada Central"
   description = "Azure region for the search service."
 }
+
+variable "eventhub_namespace_name" {
+  type        = string
+  default     = "evhns-ClosedOrders"
+  description = "Name of the Event Hub namespace."
+}
+
+variable "eventhub_name" {
+  type        = string
+  default     = "closedorders"
+  description = "Name of the Event Hub."
+}

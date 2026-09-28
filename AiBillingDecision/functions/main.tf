@@ -22,6 +22,25 @@ resource "azurerm_function_app_flex_consumption" "decision" {
   instance_memory_in_mb  = 2048
   maximum_instance_count = 40
 
+  app_settings = {
+    "AzureWebJobsStorage"                           = var.azure_search_blob_storage_connection_string
+    "DEPLOYMENT_STORAGE_CONNECTION_STRING"          = var.azure_search_blob_storage_connection_string
+    "AzureSearch__ApiKey"                           = var.search_api_key
+    "AzureSearch__ServiceUrl"                       = var.search_service_url
+    "AzureSearch__BLOBStorageConnectionString"      = var.azure_search_blob_storage_connection_string
+    "AzureSearch__VectorAlgorithmConfigurationName" = "myHnsw"
+    "AzureSearch__VectorDimensions"                 = "1536"
+    "AzureSearch__VectorizerName"                   = "myFoundry"
+    "AzureSearch__VectorSearchProfileName"          = "vector-profile"
+    "Foundry__ApiKey"                               = var.foundry_api_key
+    "Foundry__ServiceUrl"                           = var.foundry_service_url
+    "Foundry__EmbeddingDeploymentName"              = "text-embedding-3-small-code-vector"
+    "Foundry__EmbeddingModelName"                   = "text-embedding-3-small"
+    "Sql__ConnectionString"                         = var.sql_connection_string
+    "ClosedOrderEventHubConnection"                 = var.eventhub_connection_string
+    "ClosedOrderEventHubName"                       = var.eventhub_name
+  }
+
   site_config {}
 
   identity {
