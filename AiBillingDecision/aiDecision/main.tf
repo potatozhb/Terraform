@@ -124,7 +124,7 @@ output "foundry_api_key" {
 }
 
 output "foundry_service_url" {
-  value = "https://${azurerm_cognitive_account.crc-foundry.custom_subdomain_name}.cognitive.azure.com"
+  value = "https://${azurerm_cognitive_account.crc-foundry.custom_subdomain_name}.cognitiveservices.azure.com"
 }
 
 output "foundry_agent_id" {

@@ -41,7 +41,9 @@ resource "azurerm_function_app_flex_consumption" "decision" {
     "ClosedOrderEventHubName"                       = var.eventhub_name
   }
 
-  site_config {}
+  site_config {
+    application_insights_connection_string = azurerm_application_insights.functions_log.connection_string
+  }
 
   identity {
     type = "SystemAssigned"
@@ -50,4 +52,20 @@ resource "azurerm_function_app_flex_consumption" "decision" {
 
 output "function_app_id" {
   value = azurerm_function_app_flex_consumption.decision.id
+}
+
+resource "azurerm_log_analytics_workspace" "functions_ws" {
+  name                = "log-aibilling-functions"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
+resource "azurerm_application_insights" "functions_log" {
+  name                = "appi-aibilling-functions"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  workspace_id        = azurerm_log_analytics_workspace.functions_ws.id
+  application_type    = "web"
 }
