@@ -206,3 +206,22 @@ output "knowledge_index_name" {
 output "search_connection_id" {
   value = azapi_resource.search_connection.id
 }
+resource "azurerm_cognitive_deployment" "foundry_embedding" {
+  name                 = "text-embedding-3-small-code-vector"
+  cognitive_account_id = azurerm_cognitive_account.crc-foundry.id
+
+  model {
+    format  = "OpenAI"
+    name    = "text-embedding-3-small"
+    version = "1"
+  }
+
+  sku {
+    name     = "GlobalStandard"
+    capacity = 1
+  }
+}
+
+output "embedding_deployment_name" {
+  value = azurerm_cognitive_deployment.foundry_embedding.name
+}

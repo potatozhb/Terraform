@@ -56,8 +56,9 @@ module "functions" {
   search_service_url                          = module.aiDecision.search_service_url
   azure_search_blob_storage_connection_string = module.shared.azure_search_blob_storage_connection_string
 
-  foundry_api_key     = module.aiDecision.foundry_api_key
-  foundry_service_url = module.aiDecision.foundry_service_url
+  embedding_deployment_name = module.aiDecision.embedding_deployment_name
+  foundry_api_key           = module.aiDecision.foundry_api_key
+  foundry_service_url       = module.aiDecision.foundry_service_url
 
   eventhub_connection_string = module.shared.closed_order_eventhub_connection_string
   eventhub_name              = module.shared.eventhub_name

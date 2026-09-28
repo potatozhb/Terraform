@@ -71,3 +71,8 @@ variable "eventhub_name" {
   default     = "closedorders"
   description = "Name of the Event Hub."
 }
+
+variable "embedding_deployment_name" {
+  type        = string
+  description = "Foundry deployment used to generate text embeddings."
+}
