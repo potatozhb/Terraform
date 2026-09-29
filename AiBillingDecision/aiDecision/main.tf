@@ -93,6 +93,8 @@ resource "azurerm_cognitive_deployment" "crc-foundry-deployment" {
 # Manage the existing billing-assistant after importing it into Terraform state.
 # The deploying principal needs Foundry User access to this project or account.
 resource "azapi_data_plane_resource" "foundry_agent" {
+  depends_on = [azurerm_role_assignment.foundry_deployer]
+
   type      = "Microsoft.Foundry/agents@v1"
   parent_id = "${azurerm_cognitive_account.crc-foundry.custom_subdomain_name}.services.ai.azure.com/api/projects/${azurerm_cognitive_account_project.crc-foundry-project.name}"
   name      = "billing-assistant"
@@ -137,6 +139,13 @@ output "foundry_agent_name" {
 
 # The deployment identity manages index schemas, not document contents.
 data "azurerm_client_config" "search_deployer" {}
+
+# Foundry portal and agent APIs require data-plane access in addition to Owner.
+resource "azurerm_role_assignment" "foundry_deployer" {
+  scope              = azurerm_cognitive_account_project.crc-foundry-project.id
+  role_definition_id = "/subscriptions/${data.azurerm_client_config.search_deployer.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/53ca6127-db72-4b80-b1b0-d745d6d5456d"
+  principal_id       = data.azurerm_client_config.search_deployer.object_id
+}
 
 resource "azurerm_role_assignment" "search_schema_manager" {
   scope                = azurerm_search_service.crc-search.id

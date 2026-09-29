@@ -20,9 +20,11 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
+# if account is not owner, need to manually assign the owner role to the group
 resource "azurerm_resource_group" "crc-rg" {
   name     = var.resource_group_name
-  location = "Canada Central"
+  # location = "Canada Central"
+  location = "West US 2"
   tags = {
     environment = "dev"
   }
@@ -32,7 +34,8 @@ resource "azurerm_resource_group" "crc-rg" {
 module "aiDecision" {
   source              = "../aiDecision"
   resource_group_name = azurerm_resource_group.crc-rg.name
-  location            = azurerm_resource_group.crc-rg.location
+  # West US 2 is not supported openai
+  location            = "Canada Central"
 }
 
 module "shared" {
