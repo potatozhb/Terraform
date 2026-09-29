@@ -76,3 +76,8 @@ variable "embedding_deployment_name" {
   type        = string
   description = "Foundry deployment used to generate text embeddings."
 }
+
+variable "virtual_network_subnet_id" {
+  type        = string
+  description = "Delegated subnet for Function App VNet integration."
+}

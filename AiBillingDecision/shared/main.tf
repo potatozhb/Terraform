@@ -59,7 +59,7 @@ resource "azurerm_eventhub_namespace" "evhns-ClosedOrders" {
     environment = "dev"
   }
 }
-    
+
 resource "azurerm_eventhub" "closedOrders" {
   name            = var.eventhub_name
   namespace_id    = azurerm_eventhub_namespace.evhns-ClosedOrders.id
@@ -86,4 +86,49 @@ output "eventhub_name" {
 output "closed_order_eventhub_connection_string" {
   value     = azurerm_eventhub_namespace.evhns-ClosedOrders.default_primary_connection_string
   sensitive = true
+}
+
+
+resource "azurerm_virtual_network" "aiBillingNetwork" {
+  name                = "vnet-aibilling"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  address_space       = ["10.20.0.0/16"]
+
+  tags = {
+    environment = "dev"
+  }
+}
+
+resource "azurerm_subnet" "subnetDatabase" {
+  name                 = "snet-aibilling-database"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.aiBillingNetwork.name
+  address_prefixes     = ["10.20.1.0/24"]
+}
+
+resource "azurerm_subnet" "subnetFunctions" {
+  name                 = "snet-aibilling-functions"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.aiBillingNetwork.name
+  address_prefixes     = ["10.20.2.0/24"]
+
+  delegation {
+    name = "Microsoft.App/environments"
+
+    service_delegation {
+      name = "Microsoft.App/environments"
+    }
+  }
+}
+
+output "virtual_network_id" {
+  value = azurerm_virtual_network.aiBillingNetwork.id
+}
+
+output "subnet_ids" {
+  value = {
+    subnetDatabase  = azurerm_subnet.subnetDatabase.id
+    subnetFunctions = azurerm_subnet.subnetFunctions.id
+  }
 }

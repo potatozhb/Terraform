@@ -51,6 +51,7 @@ module "functions" {
   storage_account_name          = module.shared.storage_account_name
   storage_account_access_key    = module.shared.storage_account_access_key
   deployment_container_endpoint = module.shared.function_deployment_endpoint
+  virtual_network_subnet_id     = module.shared.subnet_ids.subnetFunctions
 
   search_api_key                              = module.aiDecision.search_api_key
   search_service_url                          = module.aiDecision.search_service_url

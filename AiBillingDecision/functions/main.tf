@@ -16,6 +16,7 @@ resource "azurerm_function_app_flex_consumption" "decision" {
   storage_container_endpoint  = var.deployment_container_endpoint
   storage_authentication_type = "StorageAccountConnectionString"
   storage_access_key          = var.storage_account_access_key
+  virtual_network_subnet_id   = var.virtual_network_subnet_id
 
   runtime_name           = "dotnet-isolated"
   runtime_version        = "8.0"
