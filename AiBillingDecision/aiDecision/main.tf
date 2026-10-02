@@ -15,6 +15,7 @@ resource "azurerm_search_service" "crc-search" {
   resource_group_name = var.resource_group_name
   location            = var.location
   sku                 = "basic"
+  semantic_search_sku = "free"
   partition_count     = 1
   replica_count       = 1
   # Enable Entra authentication while preserving existing API-key access.
@@ -86,7 +87,7 @@ resource "azurerm_cognitive_deployment" "crc-foundry-deployment" {
 
   sku {
     name     = "GlobalStandard"
-    capacity = 1
+    capacity = 250
   }
 }
 
@@ -227,7 +228,7 @@ resource "azurerm_cognitive_deployment" "foundry_embedding" {
 
   sku {
     name     = "GlobalStandard"
-    capacity = 1
+    capacity = 250
   }
 }
 

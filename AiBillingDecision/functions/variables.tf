@@ -6,6 +6,12 @@ variable "resource_group_name" {
   description = "Name of the resource group for the search service."
 }
 
+variable "function_app_name" {
+  type        = string
+  default     = "func-aibilling-decision"
+  description = "Globally unique Function App name."
+}
+
 variable "location" {
   type        = string
   default     = "Canada Central"
@@ -57,7 +63,13 @@ variable "azure_search_blob_storage_connection_string" {
 variable "sql_connection_string" {
   sensitive = true
   type      = string
-  default   = "Data Source=testdb.westus2.cloudapp.azure.com,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
+  default   = "Data Source=10.0.0.5,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
+}
+
+variable "search_service_name" {
+  type        = string
+  default     = "ai-billing"
+  description = "Azure Search Service Name"
 }
 
 variable "eventhub_connection_string" {

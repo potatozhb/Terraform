@@ -6,8 +6,15 @@ resource "azurerm_service_plan" "functions" {
   sku_name            = "FC1"
 }
 
+# Test database VM
+data "azurerm_subnet" "existing_subnet_function" {
+  name                 = "Function"
+  virtual_network_name = "USWest-vnet"
+  resource_group_name  = "USWest"
+}
+
 resource "azurerm_function_app_flex_consumption" "decision" {
-  name                = "func-aibilling-decision"
+  name                = var.function_app_name
   resource_group_name = var.resource_group_name
   location            = var.location
   service_plan_id     = azurerm_service_plan.functions.id
@@ -16,7 +23,10 @@ resource "azurerm_function_app_flex_consumption" "decision" {
   storage_container_endpoint  = var.deployment_container_endpoint
   storage_authentication_type = "StorageAccountConnectionString"
   storage_access_key          = var.storage_account_access_key
-  virtual_network_subnet_id   = var.virtual_network_subnet_id
+
+# add it to a virtual network subnet to access the database and eventhub
+#   virtual_network_subnet_id   = var.virtual_network_subnet_id
+  virtual_network_subnet_id = data.azurerm_subnet.existing_subnet_function.id
 
   runtime_name           = "dotnet-isolated"
   runtime_version        = "8.0"
@@ -33,6 +43,7 @@ resource "azurerm_function_app_flex_consumption" "decision" {
     "AzureSearch__VectorDimensions"                 = "1536"
     "AzureSearch__VectorizerName"                   = "myFoundry"
     "AzureSearch__VectorSearchProfileName"          = "vector-profile"
+    "AzureSearch__ServiceName"                      = var.search_service_name
     "Foundry__ApiKey"                               = var.foundry_api_key
     "Foundry__ServiceUrl"                           = var.foundry_service_url
     "Foundry__EmbeddingDeploymentName"              = var.embedding_deployment_name
