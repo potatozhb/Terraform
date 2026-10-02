@@ -63,6 +63,7 @@ variable "azure_search_blob_storage_connection_string" {
 variable "sql_connection_string" {
   sensitive = true
   type      = string
+  # test database connection string
   default   = "Data Source=10.0.0.5,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
 }
 

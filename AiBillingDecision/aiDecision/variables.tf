@@ -18,7 +18,7 @@ variable "foundry_project_name" {
 
 variable "foundry_deployment_name" {
   type        = string
-  default     = "ai-billing-foundry-deployment"
+  default     = "ai-billing-foundry-5.6-sol"
   description = "ai billing foundry deployment name"
 }
 

@@ -1,3 +1,12 @@
+# Switch between prod and dev resources, login with the correct subscription first, then run terraform plan and apply.
+# 1. Change the subscription_id variable in main.tf to switch between prod and dev resources.
+# 2. Change the resource_group_name variable in main.tf to switch between prod and dev resources.
+# 3. Change the local.is_prod variable in main.tf to switch between prod and dev resources.
+# 4. Change the "azurerm_resource_group" "crc-rg" based on the database VM location.
+# 5. Change the "azurerm_subnet" "existing_subnet_function_prod" based on the database VM location.
+
+
+
 terraform {
   required_providers {
     azapi = {
@@ -23,20 +32,21 @@ provider "azurerm" {
 }
 
 locals {
-  migration_workspace = terraform.workspace == "vs-69fe-migration"
+  is_prod = true
 
-  storage_account_name = local.migration_workspace ? "aibillingstorage69fe" : "aibillingstorage1"
-  eventhub_namespace   = local.migration_workspace ? "evhns-closedorders-69fe" : "evhns-ClosedOrders"
-  search_service_name  = local.migration_workspace ? "ai-billing-search-69fe" : "ai-billing-search"
-  foundry_name         = local.migration_workspace ? "ai-billing-foundry-69fe" : "ai-billing-foundry"
-  function_app_name    = local.migration_workspace ? "func-aibilling-decision-69fe" : "func-aibilling-decision"
+  storage_account_name = local.is_prod ? "aibillingstorageprod" : "aibillingstorage69fe"
+  eventhub_namespace   = local.is_prod ? "evhns-closedorders-prod" : "evhns-closedorders-69fe"
+  search_service_name  = local.is_prod ? "ai-billing-search-prod" : "ai-billing-search-69fe"
+  foundry_name         = local.is_prod ? "ai-billing-foundry-prod" : "ai-billing-foundry-69fe"
+  function_app_name    = local.is_prod ? "func-aibilling-decision-prod" : "func-aibilling-decision-69fe"
+  sql_connection_string = local.is_prod ? "Data Source=10.0.0.4,14333;Initial Catalog=crcii;User ID=ampmdev;Password=Am6044215677pm!" : "Data Source=10.0.0.5,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
 }
 
 # if account is not owner, need to manually assign the owner role to the group
 resource "azurerm_resource_group" "crc-rg" {
   name     = var.resource_group_name
-  # location = "Canada Central"
-  location = "West US 2"
+  location = "Canada Central"
+  # location = "West US 2"
   tags = {
     environment = "dev"
   }
@@ -78,6 +88,7 @@ module "functions" {
   storage_account_access_key    = module.shared.storage_account_access_key
   deployment_container_endpoint = module.shared.function_deployment_endpoint
   virtual_network_subnet_id     = module.shared.subnet_ids.subnetFunctions
+  sql_connection_string          = local.sql_connection_string
 
   search_api_key                              = module.aiDecision.search_api_key
   search_service_url                          = module.aiDecision.search_service_url

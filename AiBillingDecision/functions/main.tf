@@ -7,10 +7,17 @@ resource "azurerm_service_plan" "functions" {
 }
 
 # Test database VM
-data "azurerm_subnet" "existing_subnet_function" {
+# data "azurerm_subnet" "existing_subnet_function" {
+#   name                 = "Function"
+#   virtual_network_name = "USWest-vnet"
+#   resource_group_name  = "USWest"
+# }
+
+# product database VM
+data "azurerm_subnet" "existing_subnet_function_prod" {
   name                 = "Function"
-  virtual_network_name = "USWest-vnet"
-  resource_group_name  = "USWest"
+  virtual_network_name = "Canada-vnet"
+  resource_group_name  = "Canada"
 }
 
 resource "azurerm_function_app_flex_consumption" "decision" {
@@ -26,7 +33,7 @@ resource "azurerm_function_app_flex_consumption" "decision" {
 
 # add it to a virtual network subnet to access the database and eventhub
 #   virtual_network_subnet_id   = var.virtual_network_subnet_id
-  virtual_network_subnet_id = data.azurerm_subnet.existing_subnet_function.id
+  virtual_network_subnet_id = data.azurerm_subnet.existing_subnet_function_prod.id
 
   runtime_name           = "dotnet-isolated"
   runtime_version        = "8.0"
