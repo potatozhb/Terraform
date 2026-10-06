@@ -32,8 +32,7 @@ resource "azurerm_function_app_flex_consumption" "decision" {
   storage_access_key          = var.storage_account_access_key
 
 # add it to a virtual network subnet to access the database and eventhub
-#   virtual_network_subnet_id   = var.virtual_network_subnet_id
-  virtual_network_subnet_id = data.azurerm_subnet.existing_subnet_function_prod.id
+  virtual_network_subnet_id   = var.virtual_network_subnet_id
 
   runtime_name           = "dotnet-isolated"
   runtime_version        = "8.0"

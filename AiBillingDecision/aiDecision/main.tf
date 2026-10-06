@@ -98,10 +98,10 @@ resource "azapi_data_plane_resource" "foundry_agent" {
 
   type      = "Microsoft.Foundry/agents@v1"
   parent_id = "${azurerm_cognitive_account.crc-foundry.custom_subdomain_name}.services.ai.azure.com/api/projects/${azurerm_cognitive_account_project.crc-foundry-project.name}"
-  name      = "billing-assistant"
+  name      = "${var.foundry_project_name}-billing-assistant"
 
   body = {
-    name = "billing-assistant"
+    name = "${var.foundry_project_name}-billing-assistant"
     definition = {
       tools = [{
         type = "azure_ai_search"

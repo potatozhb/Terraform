@@ -38,8 +38,9 @@ locals {
   eventhub_namespace   = local.is_prod ? "evhns-closedorders-prod" : "evhns-closedorders-69fe"
   search_service_name  = local.is_prod ? "ai-billing-search-prod" : "ai-billing-search-69fe"
   foundry_name         = local.is_prod ? "ai-billing-foundry-prod" : "ai-billing-foundry-69fe"
+  foundry_project_name = local.is_prod ? "ai-billing-foundry-project-prod" : "ai-billing-foundry-project-69fe"
   function_app_name    = local.is_prod ? "func-aibilling-decision-prod" : "func-aibilling-decision-69fe"
-  sql_connection_string = local.is_prod ? "Data Source=10.0.0.4,14333;Initial Catalog=crcii;User ID=ampmdev;Password=Am6044215677pm!" : "Data Source=10.0.0.5,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
+  sql_connection_string = local.is_prod ? "Data Source=10.0.0.4,14333;Initial Catalog=crcii;User ID=ampmdev;Password=Am6044215677pm!;TrustServerCertificate=True;" : "Data Source=10.0.0.5,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
 }
 
 # if account is not owner, need to manually assign the owner role to the group
@@ -68,6 +69,7 @@ module "aiDecision" {
   resource_group_name = azurerm_resource_group.crc-rg.name
   search_service_name = local.search_service_name
   foundry_name        = local.foundry_name
+  foundry_project_name = local.foundry_project_name
   # West US 2 is not supported openai
   location            = "Canada Central"
 }
