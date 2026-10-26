@@ -1,9 +1,6 @@
 # Switch between prod and dev resources, login with the correct subscription first, then run terraform plan and apply.
 # 1. Change the subscription_id variable in main.tf to switch between prod and dev resources.
-# 2. Change the resource_group_name variable in main.tf to switch between prod and dev resources.
-# 3. Change the local.is_prod variable in main.tf to switch between prod and dev resources.
-# 4. Change the "azurerm_resource_group" "crc-rg" based on the database VM location.
-# 5. Change the "azurerm_subnet" "existing_subnet_function_prod" based on the database VM location.
+# 2. Change the "azurerm_subnet" "existing_subnet_function_prod" based on the database VM location.
 
 
 
@@ -32,9 +29,11 @@ provider "azurerm" {
 }
 
 locals {
-  is_prod = true
+  is_prod = false # set to true for prod, false for dev
 
   storage_account_name = local.is_prod ? "aibillingstorageprod" : "aibillingstorage69fe"
+  resource_group_name   = local.is_prod ? "aibillingdecision-prod" : "aibillingdecision-69fe"
+  resource_group_location = local.is_prod ? "Canada Central" : "West US 2"
   eventhub_namespace   = local.is_prod ? "evhns-closedorders-prod" : "evhns-closedorders-69fe"
   search_service_name  = local.is_prod ? "ai-billing-search-prod" : "ai-billing-search-69fe"
   foundry_name         = local.is_prod ? "ai-billing-foundry-prod" : "ai-billing-foundry-69fe"
@@ -45,9 +44,8 @@ locals {
 
 # if account is not owner, need to manually assign the owner role to the group
 resource "azurerm_resource_group" "crc-rg" {
-  name     = var.resource_group_name
-  location = "Canada Central"
-  # location = "West US 2"
+  name     = local.resource_group_name
+  location = local.resource_group_location
   tags = {
     environment = "dev"
   }

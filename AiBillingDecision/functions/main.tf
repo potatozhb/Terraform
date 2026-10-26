@@ -7,18 +7,18 @@ resource "azurerm_service_plan" "functions" {
 }
 
 # Test database VM
-# data "azurerm_subnet" "existing_subnet_function" {
-#   name                 = "Function"
-#   virtual_network_name = "USWest-vnet"
-#   resource_group_name  = "USWest"
-# }
+data "azurerm_subnet" "existing_subnet_function" {
+  name                 = "Function"
+  virtual_network_name = "USWest-vnet"
+  resource_group_name  = "USWest"
+}
 
 # product database VM
-data "azurerm_subnet" "existing_subnet_function_prod" {
-  name                 = "Function"
-  virtual_network_name = "Canada-vnet"
-  resource_group_name  = "Canada"
-}
+# data "azurerm_subnet" "existing_subnet_function_prod" {
+#   name                 = "Function"
+#   virtual_network_name = "Canada-vnet"
+#   resource_group_name  = "Canada"
+# }
 
 resource "azurerm_function_app_flex_consumption" "decision" {
   name                = var.function_app_name
