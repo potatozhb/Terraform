@@ -1,7 +1,10 @@
 # Switch between prod and dev resources, login with the correct subscription first, then run terraform plan and apply.
 # 1. Change the subscription_id variable in main.tf to switch between prod and dev resources.
 # 2. Change the "azurerm_subnet" "existing_subnet_function_prod" based on the database VM location.
-
+# Run the following commands in the terminal:
+# cd C:\dev\Terraform\AiBillingDecision\main
+# terraform workspace select vs-69fe-migration
+# terraform plan
 
 
 terraform {
@@ -42,19 +45,19 @@ locals {
   sql_connection_string = local.is_prod ? "Data Source=10.0.0.4,14333;Initial Catalog=crcii;User ID=ampmdev;Password=Am6044215677pm!;TrustServerCertificate=True;" : "Data Source=10.0.0.5,1433;Initial Catalog=crcii_copy;User ID=dev;Password=Ampm6044215677;TrustServerCertificate=True;"
 }
 
-# if account is not owner, need to manually assign the owner role to the group
-resource "azurerm_resource_group" "crc-rg" {
-  name     = local.resource_group_name
-  location = local.resource_group_location
-  tags = {
-    environment = "dev"
+# Keep the existing group when switching from a managed resource to a data source.
+removed {
+  from = azurerm_resource_group.crc-rg
+
+  lifecycle {
+    destroy = false
   }
 }
 
 module "shared" {
   source              = "../shared"
-  resource_group_name = azurerm_resource_group.crc-rg.name
-  location            = azurerm_resource_group.crc-rg.location
+  resource_group_name = local.resource_group_name
+  location            = local.resource_group_location
   storage_account_name = local.storage_account_name
 
   eventhub_namespace_name = local.eventhub_namespace
@@ -64,7 +67,7 @@ module "shared" {
 
 module "aiDecision" {
   source              = "../aiDecision"
-  resource_group_name = azurerm_resource_group.crc-rg.name
+  resource_group_name = local.resource_group_name
   search_service_name = local.search_service_name
   foundry_name        = local.foundry_name
   foundry_project_name = local.foundry_project_name
@@ -74,15 +77,15 @@ module "aiDecision" {
 
 module "database" {
   source              = "../database"
-  resource_group_name = azurerm_resource_group.crc-rg.name
-  location            = azurerm_resource_group.crc-rg.location
+  resource_group_name = local.resource_group_name
+  location            = local.resource_group_location
   virtual_network_subnet_id = module.shared.subnet_ids.subnetDatabase
 }
 
 module "functions" {
   source                        = "../functions"
-  resource_group_name           = azurerm_resource_group.crc-rg.name
-  location                      = azurerm_resource_group.crc-rg.location
+  resource_group_name           = local.resource_group_name
+  location                      = local.resource_group_location
   function_app_name             = local.function_app_name
   storage_account_name          = module.shared.storage_account_name
   storage_account_access_key    = module.shared.storage_account_access_key
@@ -102,8 +105,12 @@ module "functions" {
   eventhub_name              = module.shared.eventhub_name
 }
 
+data "azurerm_resource_group" "existing" {
+  name = local.resource_group_name
+}
+
 output "resource_group_id" {
-  value = "${azurerm_resource_group.crc-rg.name}:${azurerm_resource_group.crc-rg.id}"
+  value = data.azurerm_resource_group.existing.id
 }
 
 

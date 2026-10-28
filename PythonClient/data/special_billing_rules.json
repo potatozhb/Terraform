@@ -1,0 +1,410 @@
+[
+  {
+    "rule_id": "SR-SOFTWARE-OUTOFSCOPE-001",
+    "rule_name": "Software Installation and Configuration Changes",
+    "region": "ALL",
+    "reason": "Software contracts cover break-fix issues and software bugs. New installations, new setups, terminal relocations, menu creation, printer-routing changes, and extensive configuration changes are outside normal software contract coverage.",
+    "rule_type": "General",
+    "action": "BillableOverride",
+    "trigger_phrases": [
+      "NEW MENU",
+      "CREATE MENU",
+      "ADD MENU",
+      "NEW INSTALLATION",
+      "INSTALL SOFTWARE",
+      "NEW LAPTOP",
+      "MOVE TERMINAL",
+      "RELOCATE TERMINAL",
+      "PRINTER ROUTING",
+      "CHANGE PRINTER ROUTING",
+      "CONFIGURATION CHANGE",
+      "RECONFIGURE",
+      "NEW SETUP",
+      "Rollback"
+    ],
+    "conditions": [
+      "The matched request is materially involved in the current service",
+      "The work involves a new installation, new setup, relocation, or configuration change",
+      "The work is not break-fix troubleshooting or correction of an existing software bug"
+    ]
+  },
+  {
+    "rule_id": "SR-CONSUMABLE-001",
+    "rule_name": "Consumable Parts",
+    "region": "ALL",
+    "reason": "Consumable items may be outside normal contract coverage and may change an otherwise free service to billable.",
+    "rule_type": "Consumable",
+    "action": "BillableIfOutOfScope",
+    "trigger_phrases": [
+      "BATTERY",
+      "FUSER",
+      "GIFT CARD",
+      "GLASS",
+      "INK",
+      "KEY",
+      "LABEL",
+      "LOCK",
+      "MAG CARD",
+      "TONER",
+      "TRAY"
+    ],
+    "conditions": [
+      "The matched item is materially involved in the current service",
+      "The item was supplied, replaced, repaired, or serviced",
+      "The item is confirmed to be outside the applicable contract coverage"
+    ]
+  },
+  {
+    "rule_id": "SR-CONSUMABLE-002",
+    "rule_name": "USA Meat/Deli Scale Print Head",
+    "region": "USA",
+    "reason": "Print heads are treated as possible consumables only for USA meat/deli scale service.",
+    "rule_type": "Consumable",
+    "action": "BillableIfOutOfScope",
+    "trigger_phrases": [
+      "PRINT HEAD"
+    ],
+    "conditions": [
+      "The print head is for a meat or deli scale",
+      "The print head is materially involved in the current service",
+      "The print head is confirmed to be outside the applicable contract coverage"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-001",
+    "rule_name": "Canadian Payment Device Service",
+    "region": "CANADA",
+    "reason": "Canadian payment-related service requires billing review.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "CREDIT CARD",
+      "DEBIT",
+      "PIN PAD"
+    ],
+    "conditions": [
+      "The payment device or payment processing issue is materially involved in the current service"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-002",
+    "rule_name": "Explicit Billing Indicators",
+    "region": "ALL",
+    "reason": "Explicit billing language may indicate separately billable work and requires evaluation before overriding contract coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "BILL",
+      "BILLABLE",
+      "BILLED",
+      "FREIGHT"
+    ],
+    "conditions": [
+      "The phrase refers to the current work order rather than historical or reference information",
+      "The billing language is materially related to the current service or charge"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-003",
+    "rule_name": "Physical or Accidental Damage",
+    "region": "ALL",
+    "reason": "Physical, accidental, liquid, fire, or environmental damage may be outside normal contract coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "BURN OUT",
+      "BURNT OUT",
+      "CRACK",
+      "CRACKED",
+      "DROP",
+      "DROPPED",
+      "FIRE",
+      "FLOOD",
+      "LIQUID",
+      "SPILL",
+      "SPILLED"
+    ],
+    "conditions": [
+      "The phrase describes the current equipment condition or cause of failure"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-004",
+    "rule_name": "Theft and Tampering",
+    "region": "ALL",
+    "reason": "Theft or tampering-related damage may not be covered by normal service contracts.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "ROB",
+      "STOLE",
+      "STOLEN",
+      "THEFT",
+      "TAMPER",
+      "TAMPERED",
+      "TAMPERING"
+    ],
+    "conditions": [
+      "The theft or tampering condition is materially related to the current service request"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-005",
+    "rule_name": "Security and Compliance Service",
+    "region": "ALL",
+    "reason": "Security, malware, and PCI-related services may fall outside standard hardware or software support coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "ANTI-VIRUS",
+      "VIRUS",
+      "PCI"
+    ],
+    "conditions": [
+      "The security, malware, or compliance issue is materially involved in the current service"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-006",
+    "rule_name": "Installation and Setup",
+    "region": "ALL",
+    "reason": "Installation and setup work may represent project or change work outside normal break/fix service.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "INSTALL",
+      "INSTALLED",
+      "INSTALLING",
+      "SET UP",
+      "SETTING UP",
+      "REINSTALL",
+      "REINSALLED",
+      "REINSTALLING"
+    ],
+    "conditions": [
+      "Installation, setup, or reinstallation is part of the actual work performed or requested",
+      "The phrase does not merely describe routine troubleshooting"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-007",
+    "rule_name": "Configuration and Programming",
+    "region": "ALL",
+    "reason": "Configuration, programming, and scripting may represent additional work outside normal contract service.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "CONFIGURE",
+      "CONFIGURED",
+      "CONFIGURING",
+      "PROGRAM",
+      "PROGRAMMED",
+      "PROGRAMMING",
+      "SCRIPT",
+      "SCRIPTED",
+      "SCRIPTING"
+    ],
+    "conditions": [
+      "Configuration, programming, or scripting is actual requested or performed work",
+      "The phrase is not merely part of diagnostic troubleshooting"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-008",
+    "rule_name": "Move and Relocation",
+    "region": "ALL",
+    "reason": "Relocation and transfer work may be separately billable rather than normal break/fix support.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "MOVE",
+      "MOVED",
+      "MOVING",
+      "RELOCATE",
+      "RELOCATION",
+      "RELOCATING",
+      "TRANSFER",
+      "TRANSFERRED",
+      "TRANSFERRING"
+    ],
+    "conditions": [
+      "Equipment, systems, or services are actually being moved, relocated, or transferred"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-009",
+    "rule_name": "Change Requests and Additional Work",
+    "region": "ALL",
+    "reason": "Customer-requested additions and changes may fall outside existing contract coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "ADD",
+      "ADDED",
+      "CHANGE REQUEST"
+    ],
+    "conditions": [
+      "The customer requested new, additional, or changed functionality or equipment",
+      "The phrase represents additional work rather than repair of an existing covered item"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-010",
+    "rule_name": "Remove or Replace",
+    "region": "ALL",
+    "reason": "Removal, replacement, and supplied-item terminology is common in normal repair work and requires context before being treated as potentially billable.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "REMOVAL",
+      "REMOVE",
+      "REMOVED",
+      "REPLACE",
+      "REPLACED",
+      "REPLACING",
+      "SUPPLIED",
+      "SUPPLY"
+    ],
+    "conditions": [
+      "The activity represents additional, non-standard, or customer-requested work",
+      "Normal replacement of a failed contract-covered component does not activate this rule"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-011",
+    "rule_name": "Upgrade Service",
+    "region": "ALL",
+    "reason": "Upgrade work may represent enhancement rather than repair and may be outside normal contract coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "UPGRADE",
+      "UPGRADED",
+      "UPGRADING"
+    ],
+    "conditions": [
+      "The current work includes upgrading equipment, software, configuration, or functionality"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-012",
+    "rule_name": "Restore and Data Operations",
+    "region": "ALL",
+    "reason": "Data restoration, import/export, and corruption-related work may require separate billing evaluation.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "RESTORE",
+      "RESTORED",
+      "RESTORING",
+      "IMPORT",
+      "EXPORT",
+      "CORRUPT",
+      "CORRUPTION"
+    ],
+    "conditions": [
+      "The restore, data operation, or corruption issue is materially involved in the current service"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-013",
+    "rule_name": "Network and Connectivity",
+    "region": "ALL",
+    "reason": "Network and connectivity issues may involve infrastructure outside normal supported equipment coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "IP",
+      "ISP",
+      "NETWORK",
+      "NETWORKING",
+      "PING"
+    ],
+    "conditions": [
+      "The network, ISP, or IP issue is a material cause of the service request",
+      "Diagnostic use of ping or IP information alone does not activate the rule"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-014",
+    "rule_name": "External Power Failure",
+    "region": "ALL",
+    "reason": "External power failures or outages may represent conditions outside normal contract coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "POWER FAILURE",
+      "POWER OUTAGE"
+    ],
+    "conditions": [
+      "The external power event caused or materially contributed to the current service request"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-015",
+    "rule_name": "Training and Advisory Service",
+    "region": "ALL",
+    "reason": "Training and advisory services may not be included in normal break/fix service coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "TRAIN",
+      "TRAINED",
+      "TRAINING",
+      "QUESTIONS"
+    ],
+    "conditions": [
+      "The primary work is user training, instruction, consultation, or operational assistance"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-016",
+    "rule_name": "Mobile and Peripheral Devices",
+    "region": "ALL",
+    "reason": "Service involving laptops, mobile devices, PDAs, or tablets may require confirmation that the device is within contract scope.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "LAPTOP",
+      "MOBILE",
+      "PDA",
+      "TABLET"
+    ],
+    "conditions": [
+      "The referenced device is materially involved in the current service"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-017",
+    "rule_name": "Menu and Department Changes",
+    "region": "ALL",
+    "reason": "Menu and department changes may represent customer-requested configuration work outside standard break/fix coverage.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "DEPARTMENT",
+      "MENU"
+    ],
+    "conditions": [
+      "The current work involves creating, modifying, moving, or configuring a department or menu"
+    ]
+  },
+  {
+    "rule_id": "SR-GENERAL-018",
+    "rule_name": "Miscellaneous Operational Triggers",
+    "region": "ALL",
+    "reason": "These are weak billing indicators and require surrounding context before they can affect the billing decision.",
+    "rule_type": "General",
+    "action": "ReviewRequired",
+    "trigger_phrases": [
+      "BUTTON",
+      "LABEL",
+      "RECEIVING",
+      "SPLIT"
+    ],
+    "conditions": [
+      "The phrase is materially related to potentially out-of-scope work",
+      "The phrase alone is not sufficient to trigger a billing decision"
+    ]
+  }
+]
