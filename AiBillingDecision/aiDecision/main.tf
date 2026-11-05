@@ -216,9 +216,9 @@ resource "azurerm_role_assignment" "foundry_search_reader" {
 resource "azapi_data_plane_resource" "billing_knowledge_index" {
   type      = "Microsoft.Search/searchServices/indexes@2024-07-01"
   parent_id = "${azurerm_search_service.crc-search.name}.search.windows.net"
-  name      = "billing-knowledge-index"
+  name      = "${azurerm_search_service.crc-search.name}-index"
   body = {
-    name = "billing-knowledge-index"
+    name = "${azurerm_search_service.crc-search.name}-index"
     fields = [
       { name = "document_id", type = "Edm.String", key = true, searchable = true, filterable = true, sortable = true, facetable = true, retrievable = true, analyzer = "standard.lucene" },
       { name = "document_name", type = "Edm.String", key = false, searchable = true, filterable = true, sortable = true, facetable = true, retrievable = true, analyzer = "standard.lucene" },

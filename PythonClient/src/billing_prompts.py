@@ -128,7 +128,7 @@ def load_order_from_blob(blob_client):
         raise ValueError("The order blob must contain a nonempty JSON object.")
     return order
 
-def build_billing_prompts(order, search_client, embeddings_client, *, order_id=None, same_store=True):
+def build_billing_prompts(order, search_client, embeddings_client, *, order_id=None, same_store=False):
     """Retrieve RAG evidence and return system/user strings and API messages.
 
     Retrieval errors propagate: an unavailable knowledge base must not silently

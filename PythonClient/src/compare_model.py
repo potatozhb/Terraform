@@ -193,7 +193,7 @@ def _run_model(chat_client, model, row, retrieval_tools, *, max_completion_token
 
 
 def compare_models(order, search_client, embeddings_client, chat_client, models, *,
-                   order_id=None, same_store=True, max_completion_tokens=4096, max_tool_rounds=4,
+                   order_id=None, same_store=False, max_completion_tokens=4096, max_tool_rounds=4,
                    responses_client=None):
     """Compare models using the same order-only input and lazy retrieval tools."""
     from azure.core.exceptions import AzureError
@@ -288,6 +288,32 @@ def _stored_status_text(status):
     return f"{status['value']} ({status['label']})"
 
 
+def _max_history_similarity(row):
+    """Use retrieved cosine similarities, including evidence not cited by the model."""
+    similarities = [
+        document.get("similarity")
+        for call in row.get("tool_calls", [])
+        if call.get("name") == "get_historical_orders" and not call.get("error")
+        for document in (call.get("result") or {}).get("historical_orders", [])
+    ]
+    return max((value for value in similarities
+                if type(value) in (int, float) and math.isfinite(value)), default=None)
+
+
+def _model_metrics(report):
+    return {
+        row["deployment"]: {
+            "confidence": (row.get("decision") or {}).get("confidence"),
+            "max_history_similarity": _max_history_similarity(row),
+        }
+        for row in report["results"]
+    }
+
+
+def _metric_text(value):
+    return "N/A" if value is None else f"{value:.2f}"
+
+
 def format_comparison(report):
     """Readable table for the terminal and companion Markdown report."""
     def cell(value):
@@ -295,13 +321,14 @@ def format_comparison(report):
 
     lines = [
         f"Order: {cell(report['order_id'])} | Bill status: {cell(_stored_status_text(report.get('work_order_billing_status')))}", "",
-        "| Deployment | Result | Billing status | Confidence | Seconds | Total tokens | Chat turns | Tool calls | Summary / error |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Deployment | Result | Billing status | Confidence | Max history similarity | Seconds | Total tokens | Chat turns | Tool calls | Summary / error |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in report["results"]:
         decision, usage = row["decision"] or {}, row["usage"] or {}
         values = [row["deployment"], row["status"], decision.get("billing_status"),
-                  decision.get("confidence"), row["elapsed_seconds"], usage.get("total_tokens"),
+                  _metric_text(decision.get("confidence")), _metric_text(_max_history_similarity(row)),
+                  row["elapsed_seconds"], usage.get("total_tokens"),
                   len(row["chat_calls"]), len(row["tool_calls"]),
                   row["error"] or decision.get("summary")]
         lines.append("| " + " | ".join(cell(value) for value in values) + " |")
@@ -332,18 +359,16 @@ def _save_batch(batch, output):
     model_order = list(dict.fromkeys(
         model for item in batch["orders"] for model in item["model_decisions"]
     ))
-    decision_widths = {
-        model: max(len(f"{model.removeprefix('ai-billing-foundry-')}: {item['model_decisions'][model]}")
-                   for item in batch["orders"] if model in item["model_decisions"])
-        for model in model_order
-    }
-    rows = [["Order", "Order status", "Model decisions", "Result", "Agreement", "Error"]]
+    rows = [["Order", "status", "Model decisions", "Result", "agree", "Error"]]
     for item in batch["orders"]:
+        metrics = item.get("model_metrics", {})
         decisions = "; ".join(
-            (f"{model.removeprefix('ai-billing-foundry-')}: {item['model_decisions'][model]}"
-             if model in item["model_decisions"] else "").ljust(decision_widths[model])
+            f"{model.removeprefix('ai-billing-foundry-')}: {item['model_decisions'][model]} "
+            f"(conf: {_metric_text(metrics.get(model, {}).get('confidence'))}, "
+            f"sim: {_metric_text(metrics.get(model, {}).get('max_history_similarity'))})"
             for model in model_order
-        ).rstrip()
+            if model in item["model_decisions"]
+        )
         values = [item["order_id"],
                   _stored_status_text(item.get("work_order_billing_status")), decisions, item["status"],
                   item["all_models_agree"], item["error"]]
@@ -376,7 +401,7 @@ def _wait_for_round(previous_start, interval):
 
 
 def compare_all_orders(container_client, search_client, embeddings_client, chat_client, models, *,
-                       output, prefix="", limit=None, same_store=True, max_completion_tokens=4096,
+                       output, prefix="", limit=None, same_store=False, max_completion_tokens=4096,
                        max_tool_rounds=4, responses_client=None, round_interval_seconds=60):
     """Stream all JSON blobs and finish one order's model comparisons before the next.
 
@@ -444,6 +469,7 @@ def compare_all_orders(container_client, search_client, embeddings_client, chat_
                     row["deployment"]: row["decision"]["billing_status"] if row["status"] == "success" else row["status"]
                     for row in report["results"]
                 }
+                entry["model_metrics"] = _model_metrics(report)
             except (AzureError, OpenAIError, ValueError, TypeError, RuntimeError) as error:
                 entry["error"] = f"{type(error).__name__}: {error}"
                 print(f"  Failed: {entry['error']}", flush=True)
@@ -545,7 +571,7 @@ def main():
         if batch_mode:
             batch = compare_all_orders(
                 container, search, embeddings, chat_client, models, output=args.output,
-                prefix=args.prefix, limit=args.limit, same_store=not args.all_stores,
+                prefix=args.prefix, limit=args.limit, same_store=args.all_stores,
                 max_completion_tokens=args.max_completion_tokens,
                 max_tool_rounds=args.max_tool_rounds,
                 responses_client=responses_client,

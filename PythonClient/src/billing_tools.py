@@ -46,7 +46,7 @@ def retrieve_special_rules(search_client):
 
 
 def retrieve_historical_orders(search_client, embeddings_client, order, *,
-                               order_id=None, same_store=True):
+                               order_id=None, same_store=False):
     """Return the three closest distinct eligible orders by exact cosine vector search.
 
     Rank an order by its closest indexed chunk. Further searches exclude selected
@@ -69,7 +69,9 @@ def retrieve_historical_orders(search_client, embeddings_client, order, *,
         "document_type ne 'special_billing_rule'",
         "work_order_id ne null", "work_order_id ne ''",
         f"work_order_id ne {_literal(order_id)}",
-        "(billing_status eq 'BILLABLE' or billing_status eq 'FREE')",
+        # Filters are case-sensitive; existing indexed orders use title case.
+        "(billing_status eq 'BILLABLE' or billing_status eq 'FREE' "
+        "or billing_status eq 'Billable' or billing_status eq 'Free')",
     ]
     store_id = _field(order, "store_id", "StoreId", "StoreID")
     if same_store and store_id is not None and str(store_id).strip():
@@ -86,6 +88,12 @@ def retrieve_historical_orders(search_client, embeddings_client, order, *,
             vector_filter_mode="preFilter", filter=" and ".join(filters + exclusions),
             select=EVIDENCE_FIELDS, top=remaining,
         ))
+
+        if results:
+            print(
+                f"Retrieved {len(results)} historical vector results for order {order_id}."
+            )
+
         candidates = []
         for result in results:
             work_id = str(result.get("work_order_id") or "")
@@ -172,7 +180,7 @@ Return the final billing decision as JSON matching the policy schema.
 class BillingTools:
     """Bind tools to trusted target data, and lazily cache successful results per order."""
 
-    def __init__(self, order, search_client, embeddings_client, *, order_id, same_store=True):
+    def __init__(self, order, search_client, embeddings_client, *, order_id, same_store=False):
         self.order = deepcopy(order)
         self.search = search_client
         self.embeddings = embeddings_client
