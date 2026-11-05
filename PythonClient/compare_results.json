@@ -1,0 +1,36 @@
+{
+  "created_at_utc": "2026-11-05T18:47:26.407268+00:00",
+  "status": "running",
+  "source": {
+    "container_url": "https://aibillingstorage69fe.blob.core.windows.net/model-data-matrix",
+    "prefix": ""
+  },
+  "models": [
+    "ai-billing-foundry-6.1-sol",
+    "ai-billing-foundry-5.6-sol"
+  ],
+  "limit": null,
+  "processed_orders": 1,
+  "failed_orders": 0,
+  "skipped_non_json_blobs": 0,
+  "orders": [
+    {
+      "blob_name": "metadata/3014164.json",
+      "order_id": 3014164,
+      "status": "success",
+      "started_at_utc": "2026-11-05T18:47:27.052298+00:00",
+      "work_order_billing_status": {
+        "value": 0,
+        "label": "FREE"
+      },
+      "report_file": "compare_results_orders/20261105T184726407125Z/000001.json",
+      "model_decisions": {
+        "ai-billing-foundry-6.1-sol": "FREE",
+        "ai-billing-foundry-5.6-sol": "FREE"
+      },
+      "all_models_agree": true,
+      "error": null
+    }
+  ],
+  "round_interval_seconds": 60
+}

@@ -1,3 +1,5 @@
 azure-search-documents>=11.6.0,<12
-openai>=1.30.0,<3
+azure-storage-blob>=12.19.0,<13
+openai>=2.0.0,<3
 python-dotenv>=1.0.0,<2
+tiktoken>=0.7.0,<1

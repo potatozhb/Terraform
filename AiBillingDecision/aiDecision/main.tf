@@ -87,7 +87,7 @@ resource "azurerm_cognitive_deployment" "crc-foundry-deployment-old" {
 
   sku {
     name     = "GlobalStandard"
-    capacity = 250
+    capacity = 500
   }
 }
 
@@ -134,7 +134,7 @@ resource "azurerm_cognitive_deployment" "crc-foundry-deployment" {
 
   sku {
     name     = "GlobalStandard"
-    capacity = 250
+    capacity = 500
   }
 }
 
