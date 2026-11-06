@@ -17,6 +17,7 @@ from billing_tools import retrieve_historical_orders
 class BillingPromptTests(unittest.TestCase):
     def setUp(self):
         self.order = {"WorkOrderId": "current'1", "StoreId": "store'2",
+                      "OrderContentWithoutContract": "Replaced printer battery",
                       "OrderSearchContent": "Replaced printer battery", "Contracts": []}
         self.search = Mock()
         self.embeddings = Mock()
@@ -28,7 +29,7 @@ class BillingPromptTests(unittest.TestCase):
             {"work_order_id": identifier, "document_id": str(index), "@search.score": 0.8}
             for index, identifier in enumerate(["current'1", "old1", "old1", "old2", "old3", "old4"])
         ]
-        history = retrieve_historical_orders(self.search, self.embeddings, self.order)
+        history = retrieve_historical_orders(self.search, self.embeddings, self.order, same_store=True)
         self.assertEqual([h["work_order_id"] for h in history], ["old1", "old2", "old3"])
         self.assertEqual(history[0]["search_score"], 0.8)
         self.assertAlmostEqual(history[0]["similarity"], 0.75)
@@ -44,7 +45,7 @@ class BillingPromptTests(unittest.TestCase):
         self.assertEqual(query["top"], 3)
 
     def test_history_embedding_is_token_bounded_for_long_unicode_input(self):
-        order = {"WorkOrderId": "1", "OrderSearchContent": "Printer 故障 🔧 " * 10000}
+        order = {"WorkOrderId": "1", "OrderContentWithoutContract": "Printer 故障 🔧 " * 10000}
         original = order.copy()
         tokens = build_history_embedding_input(order)
         self.assertEqual(len(tokens), HISTORY_EMBEDDING_MAX_TOKENS)
@@ -54,18 +55,27 @@ class BillingPromptTests(unittest.TestCase):
         retrieve_historical_orders(self.search, self.embeddings, order)
         self.assertEqual(self.embeddings.embeddings.create.call_args.kwargs["input"], tokens)
 
-    def test_history_embedding_prefers_work_details_over_contracts(self):
+    def test_history_embedding_uses_work_content_without_contracts(self):
         import tiktoken
         encoding = tiktoken.get_encoding("cl100k_base")
         order = {"OrderContentWithoutContract": "Printer troubleshooting",
-                 "OrderSearchContent": "Contract conditions " * 20000, "Contracts": [{"text": "contract"}]}
+                 "OrderSearchContent": "Printer troubleshooting. Contract conditions: labor covered.",
+                 "Contracts": [{"text": "contract"}]}
         tokens = build_history_embedding_input(order)
         self.assertEqual(encoding.decode(tokens), "Printer troubleshooting")
         del order["OrderContentWithoutContract"]
         order.update(WorkOrderInlinesCombined="Printer fixed", RemarksCombined="Reconfigured routing")
         decoded = encoding.decode(build_history_embedding_input(order))
-        self.assertIn("Reconfigured routing", decoded)
-        self.assertNotIn("Contract conditions", decoded)
+        self.assertEqual(decoded, "Printer fixed\n\nReconfigured routing")
+        del order["WorkOrderInlinesCombined"], order["RemarksCombined"]
+        order.update(WorkOrderLines=[{"description": "Battery replacement"}], Remarks=["Printer fixed"])
+        decoded = encoding.decode(build_history_embedding_input(order))
+        self.assertIn("Battery replacement", decoded)
+        self.assertIn("Printer fixed", decoded)
+        self.assertNotIn("contract", decoded.lower())
+        del order["WorkOrderLines"], order["Remarks"]
+        with self.assertRaisesRegex(ValueError, "work-only content"):
+            build_history_embedding_input(order)
 
     def test_closest_distinct_orders_when_nearest_chunks_belong_to_one_order(self):
         self.search.search.side_effect = [
@@ -140,7 +150,10 @@ class BillingPromptTests(unittest.TestCase):
 
     def test_explicit_id_is_in_prompt_and_mismatched_id_is_rejected(self):
         self.search.search.side_effect = [[], []]
-        result = build_billing_prompts({"Contracts": []}, self.search, self.embeddings, order_id="123")
+        result = build_billing_prompts(
+            {"Contracts": [], "OrderContentWithoutContract": "Printer repair"},
+            self.search, self.embeddings, order_id="123",
+        )
         self.assertIn('"work_order_id": "123"', result["user_prompt"])
         with self.assertRaisesRegex(ValueError, "does not match"):
             build_billing_prompts(self.order, self.search, self.embeddings, order_id="different")

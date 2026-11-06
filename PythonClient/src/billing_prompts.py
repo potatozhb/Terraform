@@ -39,7 +39,7 @@ def build_order_search_text(order):
 
 
 def build_history_embedding_input(order):
-    """Embed service details rather than the full contract-heavy billing prompt.
+    """Embed work details only; keep contracts in the billing evidence.
 
     text-embedding-3-small uses cl100k_base. Token IDs avoid a decode/re-encode
     boundary changing the token count, and 8,000 leaves room below its limit.
@@ -60,7 +60,12 @@ def build_history_embedding_input(order):
                 value = _field(order, *names)
                 if value:
                     parts.append(_json(value))
-        content = "\n\n".join(parts) if parts else build_order_search_text(order)
+        content = "\n\n".join(parts)
+    if not content.strip():
+        raise ValueError(
+            "Historical similarity requires work-only content: supply OrderContentWithoutContract, "
+            "WorkOrderInlinesCombined/RemarksCombined, or WorkOrderLines/Remarks."
+        )
     tokens = tiktoken.get_encoding("cl100k_base").encode_ordinary(content.strip())
     if not tokens:
         raise ValueError("The historical similarity query must contain nonempty order content.")

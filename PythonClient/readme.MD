@@ -273,3 +273,35 @@ embedding account settings are reused. `--models` or
 
 The standalone `billing_prompts.py` command still supports building prompts with
 retrieved evidence embedded; `compare_model.py` uses `billing_tools.py` instead.
+
+### Index billed historical orders
+
+`src/index_billed_orders.py` reads JSON orders from the Blob container configured
+in `.env` (connection string or account name/key). It selects stored billing
+status `1` / `Billable` / `BILLABLE`, not model predictions. It embeds work-only
+content using the same helper and deployment as historical retrieval, and stores
+the complete supplied order, including contracts, in `merged_text`. Contract
+evidence must reflect coverage at the historical service date.
+
+```powershell
+.\.venv\Scripts\python.exe src/index_billed_orders.py --dry-run
+.\.venv\Scripts\python.exe src/index_billed_orders.py
+.\.venv\Scripts\python.exe src/index_billed_orders.py --include-free
+.\.venv\Scripts\python.exe src/index_billed_orders.py --order-file data/orders.json --dry-run
+```
+
+Use `--blob-name` for a single blob or `--prefix` for a subset. A local file may
+contain one order or a list. Dry runs validate eligible orders without embedding
+calls or index writes. Uploads require `AZURE_SEARCH_ENDPOINT`,
+`AZURE_SEARCH_INDEX_NAME`, `AZURE_SEARCH_ADMIN_KEY`, `AZURE_OPENAI_ENDPOINT`, and
+`AZURE_OPENAI_API_KEY`; optional deployment/API-version settings match the other
+scripts. Supply `OrderContentWithoutContract`, work lines, or remarks for vectors;
+full contract-heavy content is never used as a fallback.
+
+Large evidence is split into UTF-8 chunks of at most 30,000 bytes to fit the
+existing filterable `merged_text` field. Each chunk shares the order's work-only
+vector; reconstruct full evidence by joining `merged_text` in numeric
+`chunk_number` order. A single retrieved chunk may contain only part of a contract.
+Repeated uploads use stable chunk keys. Foreign multi-chunk orders or stale extra
+chunks stop the run for explicit migration. Upload failures stop the run;
+previously uploaded orders remain saved.
