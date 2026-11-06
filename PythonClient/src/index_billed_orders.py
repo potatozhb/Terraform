@@ -2,7 +2,6 @@
 
 import argparse
 from contextlib import ExitStack
-import hashlib
 import json
 import math
 import os
@@ -35,7 +34,7 @@ def build_document(order, source_name=""):
         raise ValueError(f"Order {identifier} has no recognized stored billing status.")
     store = _field(order, "store_id", "StoreId", "StoreID")
     return {
-        "document_id": "history-order-" + hashlib.sha256(identifier.encode("utf-8")).hexdigest(),
+        "document_id": f"{identifier}-1",
         "document_name": source_name or identifier,
         "document_type": "Order",
         "work_order_id": identifier,
@@ -47,7 +46,7 @@ def build_document(order, source_name=""):
     }
 
 
-def split_evidence(text, max_bytes=30000):
+def split_order_chunks(text, max_bytes=30000):
     """Respect the existing filterable string field's UTF-8 term limit."""
     remaining = text.encode("utf-8")
     parts = []
@@ -61,8 +60,8 @@ def split_evidence(text, max_bytes=30000):
 def upload_billed_orders(orders, search_client, embeddings_client, *, deployment=None, dry_run=False):
     """Stream (source_name, order) pairs, upserting evidence chunks per order.
 
-    Existing single-document orders retain their keys. Foreign multiple chunks
-    require explicit migration rather than silently mixing embedding strategies.
+    Document keys use <order ID>-<part number>, starting at 1.
+    Legacy or stale chunks are removed after all replacement chunks upload.
     Dry runs validate work content without calling Search or the embedding API.
     """
     counts = {"scanned": 0, "skipped": 0, "validated": 0, "uploaded": 0}
@@ -81,7 +80,7 @@ def upload_billed_orders(orders, search_client, embeddings_client, *, deployment
             raise ValueError(f"Duplicate source order ID: {identifier}")
         seen.add(identifier)
         tokens = build_history_embedding_input(order)
-        parts = split_evidence(document["merged_text"])
+        parts = split_order_chunks(document["merged_text"])
         counts["validated"] += 1
         if dry_run:
             print(f"Would upload order {identifier}: {status}, {len(tokens)} work tokens.")
@@ -90,17 +89,11 @@ def upload_billed_orders(orders, search_client, embeddings_client, *, deployment
             search_text="*", filter=f"work_order_id eq {_literal(identifier)}",
             select=["document_id", "document_type"],
         ))
-        base_key = document["document_id"]
-        if len(existing) > 1 and any(
-                not item["document_id"].startswith(base_key + "-part-") for item in existing):
-            raise ValueError(f"Order {identifier} has multiple indexed chunks; migrate those explicitly first.")
-        if len(existing) > len(parts):
-            raise ValueError(f"Order {identifier} has stale indexed chunks; migrate those explicitly first.")
-        if existing:
-            if any(item.get("document_type") == "special_billing_rule" for item in existing):
-                raise ValueError(f"Order {identifier} conflicts with a special billing rule.")
-            if len(existing) == 1:
-                document["document_id"] = existing[0]["document_id"]
+        if any(item.get("document_type") == "special_billing_rule" for item in existing):
+            raise ValueError(f"Order {identifier} conflicts with a special billing rule.")
+        expected_keys = {f"{identifier}-{part_number}" for part_number in range(1, len(parts) + 1)}
+        obsolete = [{"document_id": item["document_id"]} for item in existing
+                    if item["document_id"] not in expected_keys]
         response = embeddings_client.embeddings.create(
             model=deployment or os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
             or "text-embedding-3-small-code-vector",
@@ -113,17 +106,23 @@ def upload_billed_orders(orders, search_client, embeddings_client, *, deployment
             raise ValueError(f"Order {identifier}: invalid {DIMENSIONS}-dimensional embedding.")
         document["content_vector"] = vector
         for index, part in enumerate(parts, 1):
-            chunk = dict(document, merged_text=part, chunk_number=str(index))
-            if len(parts) > 1:
-                # Reuse a pre-existing single key for the first part if needed.
-                chunk["document_id"] = (document["document_id"] if index == 1 and len(existing) == 1
-                                        else f"{base_key}-part-{index:06d}")
+            chunk = dict(document, document_id=f"{identifier}-{index}",
+                         merged_text=part, chunk_number=str(index))
             results = search_client.merge_or_upload_documents(documents=[chunk])
+
             if len(results) != 1 or not results[0].succeeded:
                 details = "; ".join(f"{result.key}: {result.error_message}" for result in results)
                 raise RuntimeError(f"Order {identifier} upload failed: {details}")
+        # Keep the old evidence until every replacement part is safely uploaded.
+        for start in range(0, len(obsolete), 1000):
+            batch = obsolete[start:start + 1000]
+            results = search_client.delete_documents(documents=batch)
+            if len(results) != len(batch) or any(not result.succeeded for result in results):
+                details = "; ".join(f"{result.key}: {result.error_message}"
+                                    for result in results if not result.succeeded)
+                raise RuntimeError(f"Order {identifier} obsolete chunk cleanup failed: {details}")
         counts["uploaded"] += 1
-        print(f"Uploaded order {identifier}: {status}, {len(parts)} evidence chunks.", flush=True)
+        print(f"Uploaded order {identifier}: {status}, {len(parts)} order chunks.", flush=True)
     return counts
 
 

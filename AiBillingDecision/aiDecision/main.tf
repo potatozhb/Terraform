@@ -212,6 +212,14 @@ resource "azurerm_role_assignment" "foundry_search_reader" {
   principal_type       = "ServicePrincipal"
 }
 
+# Allow the Search service to generate query embeddings using its managed identity.
+resource "azurerm_role_assignment" "search_embedding_user" {
+  scope                = azurerm_cognitive_account.crc-foundry.id
+  role_definition_name = "Cognitive Services OpenAI User"
+  principal_id         = azurerm_search_service.crc-search.identity[0].principal_id
+  principal_type       = "ServicePrincipal"
+}
+
 # Billing document fields and embeddings; load documents separately.
 resource "azapi_data_plane_resource" "billing_knowledge_index" {
   type      = "Microsoft.Search/searchServices/indexes@2024-07-01"
@@ -253,6 +261,28 @@ resource "azapi_data_plane_resource" "billing_knowledge_index" {
         vectorSearchProfile = "vector-profile"
       }
     ]
+    # Use the document title and billing text for semantic reranking.
+    semantic = {
+      defaultConfiguration = "billing-semantic"
+      configurations = [{
+        name = "billing-semantic"
+        prioritizedFields = {
+          titleField = {
+            fieldName = "document_name"
+          }
+          prioritizedContentFields = [
+            { fieldName = "merged_text" }
+          ]
+          prioritizedKeywordsFields = [
+            { fieldName = "store_id" },
+            { fieldName = "document_type" },
+            { fieldName = "billing_status" },
+            { fieldName = "contract_id" },
+            { fieldName = "contract_status" }
+          ]
+        }
+      }]
+    }
     vectorSearch = {
       algorithms = [{
         name = "myHnsw"
@@ -262,12 +292,26 @@ resource "azapi_data_plane_resource" "billing_knowledge_index" {
         }
       }]
       profiles = [{
-        name      = "vector-profile"
-        algorithm = "myHnsw"
+        name       = "vector-profile"
+        algorithm  = "myHnsw"
+        vectorizer = "billing-openai-vectorizer"
+      }]
+      vectorizers = [{
+        name = "billing-openai-vectorizer"
+        kind = "azureOpenAI"
+        # Omitting apiKey and authIdentity uses the Search system-assigned identity.
+        azureOpenAIParameters = {
+          resourceUri  = "https://${azurerm_cognitive_account.crc-foundry.custom_subdomain_name}.openai.azure.com"
+          deploymentId = azurerm_cognitive_deployment.foundry_embedding.name
+          modelName    = azurerm_cognitive_deployment.foundry_embedding.model[0].name
+        }
       }]
     }
   }
-  depends_on = [azurerm_role_assignment.search_schema_manager]
+  depends_on = [
+    azurerm_role_assignment.search_schema_manager,
+    azurerm_role_assignment.search_embedding_user
+  ]
   retry = {
     error_message_regex  = ["403", "Forbidden", "401", "Unauthorized"]
     interval_seconds     = 10

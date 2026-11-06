@@ -15,8 +15,9 @@ class IndexBilledOrdersTests(unittest.TestCase):
                       "OrderContentWithoutContract": "Printer repair",
                       "Contracts": [{"coverage": "Labor covered"}]}
         self.search, self.embeddings = Mock(), Mock()
-        self.search.search.return_value = [{"document_id": "existing-key", "document_type": "Order"}]
+        self.search.search.return_value = [{"document_id": "123-1", "document_type": "Order"}]
         self.search.merge_or_upload_documents.return_value = [SimpleNamespace(succeeded=True)]
+        self.search.delete_documents.return_value = [SimpleNamespace(succeeded=True)]
         self.embeddings.embeddings.create.return_value = SimpleNamespace(
             data=[SimpleNamespace(embedding=[0.1] * 1536)])
 
@@ -24,7 +25,7 @@ class IndexBilledOrdersTests(unittest.TestCase):
         import tiktoken
         counts = upload_billed_orders([("order.json", self.order)], self.search, self.embeddings)
         document = self.search.merge_or_upload_documents.call_args.kwargs["documents"][0]
-        self.assertEqual(document["document_id"], "existing-key")
+        self.assertEqual(document["document_id"], "123-1")
         self.assertEqual(document["billing_status"], "BILLABLE")
         self.assertEqual(json.loads(document["merged_text"])["Contracts"], self.order["Contracts"])
         tokens = self.embeddings.embeddings.create.call_args.kwargs["input"]
@@ -45,17 +46,37 @@ class IndexBilledOrdersTests(unittest.TestCase):
         self.search.search.assert_not_called()
         self.embeddings.embeddings.create.assert_not_called()
 
-    def test_multiple_existing_chunks_are_not_overwritten(self):
-        self.search.search.return_value *= 2
-        with self.assertRaisesRegex(ValueError, "multiple indexed chunks"):
+    def test_stale_parts_are_removed_after_upload(self):
+        self.search.search.return_value = [
+            {"document_id": "123-1", "document_type": "Order"},
+            {"document_id": "123-2", "document_type": "Order"},
+        ]
+        upload_billed_orders([("order.json", self.order)], self.search, self.embeddings)
+        self.search.delete_documents.assert_called_once_with(documents=[{"document_id": "123-2"}])
+        names = [call[0] for call in self.search.method_calls]
+        self.assertLess(names.index("merge_or_upload_documents"), names.index("delete_documents"))
+
+    def test_legacy_key_is_replaced(self):
+        self.search.search.return_value = [{"document_id": "existing-key", "document_type": "Order"}]
+        upload_billed_orders([("order.json", self.order)], self.search, self.embeddings)
+        document = self.search.merge_or_upload_documents.call_args.kwargs["documents"][0]
+        self.assertEqual(document["document_id"], "123-1")
+        self.search.delete_documents.assert_called_once_with(documents=[{"document_id": "existing-key"}])
+
+    def test_cleanup_failure_is_reported(self):
+        self.search.search.return_value = [{"document_id": "existing-key", "document_type": "Order"}]
+        self.search.delete_documents.return_value = [
+            SimpleNamespace(succeeded=False, key="existing-key", error_message="Rejected")]
+        with self.assertRaisesRegex(RuntimeError, "cleanup failed.*Rejected"):
             upload_billed_orders([("order.json", self.order)], self.search, self.embeddings)
-        self.search.merge_or_upload_documents.assert_not_called()
 
     def test_upload_failure_is_reported(self):
+        self.search.search.return_value = [{"document_id": "existing-key", "document_type": "Order"}]
         self.search.merge_or_upload_documents.return_value = [
             SimpleNamespace(succeeded=False, key="existing-key", error_message="Rejected")]
         with self.assertRaisesRegex(RuntimeError, "Rejected"):
             upload_billed_orders([("order.json", self.order)], self.search, self.embeddings)
+        self.search.delete_documents.assert_not_called()
 
     def test_large_unicode_evidence_is_preserved_in_bounded_chunks(self):
         text = "Printer repair. 故障 🔧 " * 6000
@@ -69,6 +90,8 @@ class IndexBilledOrdersTests(unittest.TestCase):
                   for call in self.search.merge_or_upload_documents.call_args_list]
         self.assertEqual(json.loads("".join(chunk["merged_text"] for chunk in chunks)), self.order)
         self.assertEqual(len({chunk["document_id"] for chunk in chunks}), len(chunks))
+        self.assertEqual([chunk["document_id"] for chunk in chunks],
+                         [f"123-{part}" for part in range(1, len(chunks) + 1)])
         self.embeddings.embeddings.create.assert_called_once()
 
 
