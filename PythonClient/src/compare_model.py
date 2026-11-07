@@ -25,7 +25,7 @@ except ImportError:
     from billing_responses import run_responses
 
 
-# Snapshot of AiBillingDecision/main/main.tf (is_prod = false),
+# Snapshot of AiBillingDecision/environments/dev/main.tf,
 # shared/variables.tf and aiDecision/{main,variables}.tf. No credentials.
 TERRAFORM_DEFAULTS = {
     "storage_account": "aibillingstorage69fe",

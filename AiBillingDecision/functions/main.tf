@@ -6,19 +6,7 @@ resource "azurerm_service_plan" "functions" {
   sku_name            = "FC1"
 }
 
-# Test database VM
-data "azurerm_subnet" "existing_subnet_function" {
-  name                 = "Function"
-  virtual_network_name = "USWest-vnet"
-  resource_group_name  = "USWest"
-}
-
-# product database VM
-# data "azurerm_subnet" "existing_subnet_function_prod" {
-#   name                 = "Function"
-#   virtual_network_name = "Canada-vnet"
-#   resource_group_name  = "Canada"
-# }
+# Function App VNet integration is supplied through virtual_network_subnet_id.
 
 resource "azurerm_function_app_flex_consumption" "decision" {
   name                = var.function_app_name

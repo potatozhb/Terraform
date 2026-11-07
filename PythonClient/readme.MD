@@ -248,8 +248,7 @@ chat turns and tool execution, and can be lower for models receiving cached
 retrieval results. `--all-stores` permits history from other stores. Agreement is
 incomplete if any model fails; agreement alone does not establish correctness.
 
-Nonsecret defaults are copied from `AiBillingDecision/main/main.tf`
-(`is_prod = false`), `shared/variables.tf`, and `aiDecision/{main,variables}.tf`:
+Nonsecret defaults are copied from `AiBillingDecision/environments/dev/main.tf`, `shared/variables.tf`, and `aiDecision/{main,variables}.tf`:
 
 | Setting | Terraform dev default |
 | --- | --- |

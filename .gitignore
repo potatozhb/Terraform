@@ -15,3 +15,6 @@ crash.*.log
 # Provider binaries copied outside the Terraform cache
 terraform-provider-*
 compare_results_orders
+
+# Recovery archives contain historical state and credentials.
+AiBillingDecision/.recovery/
