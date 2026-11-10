@@ -15,7 +15,7 @@ resource "azurerm_search_service" "crc-search" {
   resource_group_name = var.resource_group_name
   location            = var.location
   sku                 = "basic"
-  semantic_search_sku = "free"
+  semantic_search_sku = "standard"
   partition_count     = 1
   replica_count       = 1
   # Enable Entra authentication while preserving existing API-key access.
