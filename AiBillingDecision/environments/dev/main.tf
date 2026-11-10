@@ -73,10 +73,17 @@ module "aiDecision" {
   search_service_name  = local.search_service_name
   foundry_name         = local.foundry_name
   foundry_project_name = local.foundry_project_name
+  foundry_deployment_name_old = "${local.search_service_name}-foundry-5.6-sol"
+  foundry_deployment_name = "${local.search_service_name}-foundry-6.1-sol"
   # West US 2 is not supported openai
   location = "Canada Central"
 }
 
+data "azurerm_subnet" "existing_functions" {
+  name                 = "Function"
+  virtual_network_name = "USWest-vnet"
+  resource_group_name  = "USWest"
+}
 
 module "functions" {
   source                        = "../../functions"
@@ -86,11 +93,12 @@ module "functions" {
   storage_account_name          = module.shared.storage_account_name
   storage_account_access_key    = module.shared.storage_account_access_key
   deployment_container_endpoint = module.shared.function_deployment_endpoint
-  virtual_network_subnet_id     = module.shared.subnet_ids.subnetFunctions
+  virtual_network_subnet_id     = data.azurerm_subnet.existing_functions.id
   sql_connection_string         = var.sql_connection_string
 
   search_api_key                              = module.aiDecision.search_api_key
   search_service_url                          = module.aiDecision.search_service_url
+  search_service_name                         = local.search_service_name
   azure_search_blob_storage_connection_string = module.shared.azure_search_blob_storage_connection_string
 
   embedding_deployment_name = module.aiDecision.embedding_deployment_name

@@ -8,6 +8,12 @@ import os
 from pathlib import Path
 
 try:
+    from .environment import add_environment_argument, load_environment
+except ImportError:
+    from environment import add_environment_argument, load_environment
+
+
+try:
     from .billing_prompts import ROOT, _field, _literal, build_history_embedding_input, load_order_from_blob
     from .billing_tools import DIMENSIONS
 except ImportError:
@@ -127,9 +133,9 @@ def upload_billed_orders(orders, search_client, embeddings_client, *, deployment
 
 
 def main():
-    from dotenv import load_dotenv
-    load_dotenv(ROOT / ".env")
+    load_environment()
     parser = argparse.ArgumentParser(description=__doc__)
+    add_environment_argument(parser)
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--order-file", type=Path, help="A JSON order or list of orders.")
     source.add_argument("--blob-name", help="One JSON blob; otherwise scan the configured container.")
@@ -183,7 +189,7 @@ def main():
 def required(name):
     value = os.getenv(name, "").strip()
     if not value:
-        raise ValueError(f"Set {name} in PythonClient/.env.")
+        raise ValueError(f"Set {name} in the selected PythonClient/.env.dev or .env.prod.")
     return value
 
 

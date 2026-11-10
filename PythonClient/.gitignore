@@ -3,3 +3,9 @@
 __pycache__/
 /compare_results.json
 /compare_results.md
+
+# Environment credentials; commit only templates.
+.env.*
+!.env.*.example
+!.env.example
+/results/

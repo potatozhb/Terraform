@@ -40,6 +40,7 @@ resource "azurerm_function_app_flex_consumption" "decision" {
     "AzureSearch__ServiceName"                      = var.search_service_name
     "Foundry__ApiKey"                               = var.foundry_api_key
     "Foundry__ServiceUrl"                           = var.foundry_service_url
+    "Foundry__ModelVersion"                         = "6.1-sol"
     "Foundry__EmbeddingDeploymentName"              = var.embedding_deployment_name
     "Foundry__EmbeddingModelName"                   = "text-embedding-3-small"
     "Sql__ConnectionString"                         = var.sql_connection_string

@@ -6,6 +6,12 @@ import json
 import os
 from pathlib import Path
 
+try:
+    from .environment import add_environment_argument, load_environment
+except ImportError:
+    from environment import add_environment_argument, load_environment
+
+
 ROOT = Path(__file__).resolve().parents[1]
 HISTORY_EMBEDDING_MAX_TOKENS = 8000
 
@@ -165,12 +171,13 @@ def build_billing_prompts(order, search_client, embeddings_client, *, order_id=N
 
 
 def main():
-    from dotenv import load_dotenv
+    load_environment()
     from azure.core.credentials import AzureKeyCredential
     from azure.search.documents import SearchClient
     from openai import AzureOpenAI
 
     parser = argparse.ArgumentParser(description=__doc__)
+    add_environment_argument(parser)
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--order-file", type=Path, help="Local JSON WorkOrderDto.")
     source.add_argument("--blob-name", help="Existing JSON order blob name.")
@@ -180,7 +187,6 @@ def main():
     args = parser.parse_args()
     if not (args.order_file or args.blob_name or args.order_id):
         parser.error("Supply --order-file, --blob-name, or --order-id.")
-    load_dotenv(ROOT / ".env")
     key = os.getenv("AZURE_SEARCH_QUERY_KEY") or os.getenv("AZURE_SEARCH_ADMIN_KEY")
     required = ["AZURE_SEARCH_ENDPOINT", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"]
     if args.blob_name:
@@ -189,7 +195,7 @@ def main():
     if not key:
         missing.append("AZURE_SEARCH_QUERY_KEY (or AZURE_SEARCH_ADMIN_KEY)")
     if missing:
-        raise ValueError("Set these values in PythonClient/.env: " + ", ".join(missing))
+        raise ValueError("Set these values in the selected PythonClient/.env.dev or .env.prod: " + ", ".join(missing))
     with ExitStack() as stack:
         search = stack.enter_context(SearchClient(
             endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],

@@ -6,6 +6,12 @@ import os
 import sys
 from pathlib import Path
 
+try:
+    from .environment import add_environment_argument, load_environment
+except ImportError:
+    from environment import add_environment_argument, load_environment
+
+
 ROOT = Path(__file__).resolve().parents[1]
 DIMENSIONS = 1536
 
@@ -44,19 +50,17 @@ def build_documents(rules):
 
 
 def upload(documents):
-    from dotenv import load_dotenv
     from azure.core.credentials import AzureKeyCredential
     from azure.search.documents import SearchClient
     from openai import AzureOpenAI
 
-    load_dotenv(ROOT / ".env")
     required = (
         "AZURE_SEARCH_ENDPOINT", "AZURE_SEARCH_ADMIN_KEY",
         "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY",
     )
     missing = [name for name in required if not os.getenv(name, "").strip()]
     if missing:
-        raise ValueError("Set these values in PythonClient/.env: " + ", ".join(missing))
+        raise ValueError("Set these values in the selected PythonClient/.env.dev or .env.prod: " + ", ".join(missing))
 
     with AzureOpenAI(
         azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
@@ -91,7 +95,9 @@ def upload(documents):
 
 
 def main():
+    load_environment()
     parser = argparse.ArgumentParser(description=__doc__)
+    add_environment_argument(parser)
     parser.add_argument("--data", type=Path, default=ROOT / "data" / "special_billing_rules.json")
     parser.add_argument("--dry-run", action="store_true", help="Print documents without embeddings or Azure calls.")
     args = parser.parse_args()

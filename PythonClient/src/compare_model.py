@@ -12,6 +12,12 @@ from pathlib import Path
 import time
 
 try:
+    from .environment import add_environment_argument, load_environment
+except ImportError:
+    from environment import add_environment_argument, load_environment
+
+
+try:
     from .billing_prompts import ROOT, _field, load_order_from_blob
 except ImportError:
     from billing_prompts import ROOT, _field, load_order_from_blob
@@ -37,11 +43,26 @@ TERRAFORM_DEFAULTS = {
 }
 
 
+PRODUCTION_DEFAULTS = {
+    "storage_account": "aibillingstorageprod",
+    "storage_container": "foundry",
+    "search_endpoint": "https://ai-billing-search-prod.search.windows.net",
+    "search_index": "ai-billing-search-prod-index",
+    "openai_endpoint": "https://ai-billing-foundry-prod.cognitiveservices.azure.com",
+    "models": ["ai-billing-search-prod-foundry-6.1-sol", "ai-billing-search-prod-foundry-5.6-sol"],
+}
+
 # This deployment requires Responses for reasoning with function tools.
 DEPLOYMENT_REQUEST_OPTIONS = {
     "ai-billing-foundry-6.1-sol": {"reasoning": {"effort": "low"}},
 }
-RESPONSES_DEPLOYMENTS = {"ai-billing-foundry-6.1-sol"}
+RESPONSES_DEPLOYMENTS = {
+    "ai-billing-foundry-6.1-sol",
+    "ai-billing-search-69fe-foundry-6.1-sol",
+    "ai-billing-search-prod-foundry-6.1-sol",
+}
+for deployment in RESPONSES_DEPLOYMENTS:
+    DEPLOYMENT_REQUEST_OPTIONS[deployment] = {"reasoning": {"effort": "low"}}
 
 
 def _setting(name, fallback=None):
@@ -49,11 +70,13 @@ def _setting(name, fallback=None):
     return os.getenv(name, "").strip() or fallback
 
 
-def build_argument_parser():
+def build_argument_parser(environment="dev"):
     """Command line overrides environment settings, which override Terraform defaults."""
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    add_environment_argument(parser)
+    defaults = TERRAFORM_DEFAULTS if environment == "dev" else PRODUCTION_DEFAULTS
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--blob-name", default=_setting("AZURE_STORAGE_BLOB_NAME"),
                         help="Compare just this JSON blob; otherwise process all JSON blobs.")
@@ -64,7 +87,7 @@ def build_argument_parser():
     parser.add_argument("--limit", type=int, help="Optional maximum number of JSON blobs to process.")
     parser.add_argument("--order-id", help="Target ID when it is absent from the blob JSON.")
     parser.add_argument("--models", nargs="+",
-                        default=_setting("AZURE_OPENAI_COMPARE_DEPLOYMENTS", ",".join(TERRAFORM_DEFAULTS["models"])).split(","),
+                        default=_setting("AZURE_OPENAI_COMPARE_DEPLOYMENTS", ",".join(defaults["models"])).split(","),
                         help="Azure chat deployment names (at least two).")
     for argument, variable in (
         ("storage_account", "AZURE_STORAGE_ACCOUNT_NAME"),
@@ -74,7 +97,7 @@ def build_argument_parser():
         ("openai_endpoint", "AZURE_OPENAI_ENDPOINT"),
     ):
         parser.add_argument("--" + argument.replace("_", "-"),
-                            default=_setting(variable, TERRAFORM_DEFAULTS[argument]),
+                            default=_setting(variable, defaults[argument]),
                             help=f"Overrides {variable}.")
     parser.add_argument("--chat-endpoint", default=_setting("AZURE_OPENAI_CHAT_ENDPOINT"),
                         help="Chat endpoint; defaults to --openai-endpoint.")
@@ -85,7 +108,7 @@ def build_argument_parser():
     parser.add_argument("--timeout", type=float, default=120, help="Timeout in seconds for each chat request.")
     parser.add_argument("--round-interval", type=float, default=60,
                         help="Minimum seconds between batch order round starts; one round compares all models.")
-    parser.add_argument("--output", type=Path, default=ROOT / "compare_results.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "results" / environment / "compare_results.json")
     return parser
 
 
@@ -495,10 +518,9 @@ def compare_all_orders(container_client, search_client, embeddings_client, chat_
 
 
 def main():
-    from dotenv import load_dotenv
+    environment = load_environment()
 
-    load_dotenv(ROOT / ".env")
-    parser = build_argument_parser()
+    parser = build_argument_parser(environment)
     args = parser.parse_args()
     batch_mode = args.all_orders or not args.blob_name
     if batch_mode and args.order_id:
@@ -527,7 +549,7 @@ def main():
     if not search_key:
         missing.append("AZURE_SEARCH_QUERY_KEY (or AZURE_SEARCH_ADMIN_KEY)")
     if missing:
-        parser.error("Set these values in PythonClient/.env: " + ", ".join(missing))
+        parser.error("Set these values in the selected PythonClient/.env.dev or .env.prod: " + ", ".join(missing))
 
     from azure.core.credentials import AzureKeyCredential
     from azure.search.documents import SearchClient

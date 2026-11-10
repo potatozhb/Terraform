@@ -5,6 +5,42 @@
 2. Build an agent with knowledge base.
 3. Publish to Teams & Microsoft 365 Copilot
 
+## Development and production configuration
+
+Every CLI accepts `--env dev` or `--env prod`. The default is `dev`; set
+`$env:PYTHONCLIENT_ENV = "prod"` to change the session default. An explicit
+`--env` wins over that selector.
+
+The scripts load only `PythonClient/.env.dev` or `PythonClient/.env.prod`, using
+the project directory even when launched elsewhere. The legacy `.env` is no
+longer loaded. Existing `.env` settings were copied unchanged to `.env.dev`.
+`.env.prod` starts with production resource names from Terraform and blank keys;
+fill in the production credentials before calling Azure. Check index, container,
+and deployment names against your deployed resources. No dev credentials are
+copied into the prod file.
+
+For a new checkout, copy `.env.dev.example` to `.env.dev` and
+`.env.prod.example` to `.env.prod`. These local files are ignored by Git.
+`.env.example` is also a development template.
+
+Precedence: command-line options, then exported process variables, then the
+selected file, then script defaults. Unset exported Azure settings when switching
+environments if they would override the selected file. A missing environment
+file is an error; there is no fallback to `.env` or the other environment.
+
+From `PythonClient`:
+
+```powershell
+.\.venv\Scripts\python.exe src/index_billing_rules.py --env dev --dry-run
+.\.venv\Scripts\python.exe src/index_billing_rules.py --env prod
+.\.venv\Scripts\python.exe src/index_billed_orders.py --env dev --dry-run
+.\.venv\Scripts\python.exe src/billing_prompts.py --env prod --order-id 12345
+.\.venv\Scripts\python.exe src/compare_model.py --env prod --blob-name "orders/12345.json"
+```
+
+Comparison reports default to `results/dev/` or `results/prod/` so the two
+environments do not overwrite each other's reports. `--output` overrides this.
+
 ## Index special billing rules
 
 `data/special_billing_rules.json` preserves all 21 rules from the supplied C#
@@ -16,10 +52,7 @@ From `PythonClient`, install dependencies into the existing virtual environment:
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Append the settings in `.env.example` to your existing `.env` and fill in your
-Search admin key and Foundry account key. Adjust the endpoints for your subscription.
-The Foundry project endpoint and chat model deployment in the existing `.env`
-are separate from the account endpoint and embedding deployment used here.
+Fill in the selected environment file as described above.
 
 Preview the documents without credentials, embeddings, or Azure requests:
 
@@ -56,7 +89,7 @@ calling the chat model or changing stored records. It uses the account OpenAI
 endpoint for query embeddings and Azure AI Search for evidence.
 
 Load an existing JSON order from Blob Storage (set the storage connection string
-and container in `.env`; supply the actual blob name):
+and container in the selected `.env.dev` or `.env.prod`; supply the actual blob name):
 
 ```powershell
 .\.venv\Scripts\python.exe src/billing_prompts.py --blob-name "orders/12345.json" --order-id 12345 --output prompts.json
@@ -227,16 +260,16 @@ skipped. Invalid order blobs are recorded and the batch continues.
 
 Batch reports:
 
-- `compare_results.json`: checkpointed manifest with order status, decisions,
+- `results/<env>/compare_results.json`: checkpointed manifest with order status, decisions,
   agreement, errors, and full-report paths.
-- `compare_results.md`: combined comparison table.
-- `compare_results_orders/<run timestamp>/`: full per-order JSON and Markdown
+- `results/<env>/compare_results.md`: combined comparison table.
+- `results/<env>/compare_results_orders/<run timestamp>/`: full per-order JSON and Markdown
   reports, containing initial prompts, tool definitions, each model's conversation,
   tool-call arguments/results/cache hits/errors, parsed final decisions,
   per-turn and total token usage, latency, and chat/tool call counts.
 
-Single-blob mode writes the full report directly to `compare_results.json` and
-its table to `compare_results.md`. `--output` changes the destination. Completed
+Single-blob mode writes the full report to `results/<env>/compare_results.json`
+and its table to `results/<env>/compare_results.md`. `--output` changes the destination. Completed
 order reports are checkpointed before moving on; listing failures mark the batch
 `interrupted`. Rerunning starts a new run rather than resuming the old one.
 
@@ -248,9 +281,10 @@ chat turns and tool execution, and can be lower for models receiving cached
 retrieval results. `--all-stores` permits history from other stores. Agreement is
 incomplete if any model fails; agreement alone does not establish correctness.
 
-Nonsecret defaults are copied from `AiBillingDecision/environments/dev/main.tf`, `shared/variables.tf`, and `aiDecision/{main,variables}.tf`:
+The comparison script retains these historical dev fallbacks for compatibility.
+The environment templates reflect the current Terraform names and override them:
 
-| Setting | Terraform dev default |
+| Setting | Legacy dev fallback |
 | --- | --- |
 | Storage account | `aibillingstorage69fe` |
 | Container | `foundry` |
@@ -260,10 +294,11 @@ Nonsecret defaults are copied from `AiBillingDecision/environments/dev/main.tf`,
 | Compared deployments | `ai-billing-foundry-6.1-sol`, `ai-billing-foundry-5.6-sol` |
 | Embedding deployment | `text-embedding-3-small-code-vector` |
 
-CLI settings override `.env`/environment values, which override these defaults.
+These legacy dev defaults apply only to dev. Prod has separate resource defaults;
+see the environment templates and precedence above.
 The local order container discovered during setup is `model-data-matrix`; select
 it with `AZURE_STORAGE_CONTAINER_NAME` or `--storage-container`. Credentials are
-loaded from `.env`: Search query/admin key, OpenAI API key, and either a storage
+loaded from the selected environment file: Search query/admin key, OpenAI API key, and either a storage
 connection string or `AZURE_STORAGE_ACCOUNT_KEY`. A connection string selects
 its own account. Optional `AZURE_OPENAI_CHAT_ENDPOINT` and
 `AZURE_OPENAI_CHAT_API_KEY` select a separate chat account; otherwise the
@@ -276,7 +311,7 @@ retrieved evidence embedded; `compare_model.py` uses `billing_tools.py` instead.
 ### Index billed historical orders
 
 `src/index_billed_orders.py` reads JSON orders from the Blob container configured
-in `.env` (connection string or account name/key). It selects stored billing
+in the selected `.env.dev` or `.env.prod` (connection string or account name/key). It selects stored billing
 status `1` / `Billable` / `BILLABLE`, not model predictions. It embeds work-only
 content using the same helper and deployment as historical retrieval, and stores
 the complete supplied order, including contracts, in `merged_text`. Contract

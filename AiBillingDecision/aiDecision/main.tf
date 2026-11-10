@@ -76,7 +76,7 @@ resource "azurerm_cognitive_account_project" "crc-foundry-project" {
 
 
 resource "azurerm_cognitive_deployment" "crc-foundry-deployment-old" {
-  name                 = "ai-billing-foundry-5.6-sol"
+  name                 = var.foundry_deployment_name_old
   cognitive_account_id = azurerm_cognitive_account.crc-foundry.id
 
   model {
@@ -263,9 +263,9 @@ resource "azapi_data_plane_resource" "billing_knowledge_index" {
     ]
     # Use the document title and billing text for semantic reranking.
     semantic = {
-      defaultConfiguration = "billing-semantic"
+      defaultConfiguration = "${azurerm_search_service.crc-search.name}-semantic"
       configurations = [{
-        name = "billing-semantic"
+        name = "${azurerm_search_service.crc-search.name}-semantic"
         prioritizedFields = {
           titleField = {
             fieldName = "document_name"
