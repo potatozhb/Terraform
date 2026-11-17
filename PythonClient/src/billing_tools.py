@@ -226,11 +226,13 @@ class BillingTools:
 
         return "auto" if turn < max_tool_rounds else "none"
 
-    def execute(self, name, arguments):
+    def execute(self, name, arguments, *, model=None):
         if name not in {"get_historical_orders", "get_special_rules", "get_line_item"}:
             raise ValueError(f"Unknown billing tool: {name}")
         if json.loads(arguments) != {}:
             raise ValueError(f"{name} accepts only an empty JSON object; the target order is application-scoped.")
+        if model is not None:
+            print(f"Model {model} called {name}")
         cached = name in self.cache
         if not cached:
             if name == "get_special_rules":

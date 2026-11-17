@@ -65,7 +65,7 @@ def run_responses(client, model, row, retrieval_tools, *, max_completion_tokens,
             row["tool_calls"].append(trace)
             start = time.perf_counter()
             try:
-                result, cached = retrieval_tools.execute(call.name, call.arguments)
+                result, cached = retrieval_tools.execute(call.name, call.arguments, model=model)
                 trace.update(result=result, cached=cached)
             except Exception as error:
                 trace["error"] = f"{type(error).__name__}: {error}"

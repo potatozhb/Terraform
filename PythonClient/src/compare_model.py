@@ -39,7 +39,7 @@ TERRAFORM_DEFAULTS = {
     "search_endpoint": "https://ai-billing-search-69fe.search.windows.net",
     "search_index": "billing-knowledge-index",
     "openai_endpoint": "https://ai-billing-foundry-69fe.cognitiveservices.azure.com",
-    "models": ["ai-billing-foundry-6.1-sol", "ai-billing-foundry-5.6-sol"],
+    "models": ["ai-billing-search-69fe-foundry-6.1-sol", "ai-billing-search-69fe-foundry-5.6-sol"],
 }
 
 
@@ -194,7 +194,9 @@ def _run_model(chat_client, model, row, retrieval_tools, *, max_completion_token
                 row["tool_calls"].append(trace)
                 start = time.perf_counter()
                 try:
-                    result, cached = retrieval_tools.execute(call.function.name, call.function.arguments)
+                    result, cached = retrieval_tools.execute(
+                        call.function.name, call.function.arguments, model=model,
+                    )
                     trace.update(result=result, cached=cached)
                 except Exception as error:
                     # Never substitute an empty successful retrieval for a failed tool.
@@ -308,7 +310,7 @@ def stored_billing_status(order):
 def _stored_status_text(status):
     if status is None or status.get("value") is None:
         return "UNKNOWN"
-    return f"{status['value']} ({status['label']})"
+    return f"{status['value']} ({_billing_status_label(status['label'])})"
 
 
 def _max_history_similarity(row):
@@ -337,6 +339,20 @@ def _metric_text(value):
     return "N/A" if value is None else f"{value:.2f}"
 
 
+def _model_label(deployment):
+    for prefix in ("ai-billing-search-69fe-foundry-", "ai-billing-search-prod-foundry-",
+                   "ai-billing-foundry-"):
+        if deployment.startswith(prefix):
+            return deployment.removeprefix(prefix)
+    return deployment
+
+
+def _billing_status_label(status):
+    if isinstance(status, str):
+        return {"REVIEW_REQUIRED": "R_R", "BILLABLE": "BILL"}.get(status.upper(), status)
+    return status
+
+
 def format_comparison(report):
     """Readable table for the terminal and companion Markdown report."""
     def cell(value):
@@ -349,7 +365,7 @@ def format_comparison(report):
     ]
     for row in report["results"]:
         decision, usage = row["decision"] or {}, row["usage"] or {}
-        values = [row["deployment"], row["status"], decision.get("billing_status"),
+        values = [_model_label(row["deployment"]), row["status"], _billing_status_label(decision.get("billing_status")),
                   _metric_text(decision.get("confidence")), _metric_text(_max_history_similarity(row)),
                   row["elapsed_seconds"], usage.get("total_tokens"),
                   len(row["chat_calls"]), len(row["tool_calls"]),
@@ -361,6 +377,27 @@ def format_comparison(report):
     return "\n".join(lines) + "\n"
 
 
+def _update_latest_reports(report, output):
+    """Keep the top-level reports current for default dev/prod output paths."""
+    output = Path(output).resolve()
+    root = ROOT.resolve()
+    if output not in {root / "results" / env / "compare_results.json" for env in ("dev", "prod")}:
+        return
+    latest = deepcopy(report)
+    # Batch report paths are relative to the manifest's directory.
+    for order in latest.get("orders", []):
+        if order.get("report_file"):
+            order["report_file"] = Path(os.path.relpath(
+                output.parent / order["report_file"], root,
+            )).as_posix()
+    (root / "compare_results.json").write_text(
+        json.dumps(latest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8",
+    )
+    (root / "compare_results.md").write_text(
+        output.with_suffix(".md").read_text(encoding="utf-8"), encoding="utf-8",
+    )
+
+
 def write_reports(report, output):
     """Save full evidence/results as JSON and a companion comparison table."""
     output = Path(output)
@@ -369,6 +406,7 @@ def write_reports(report, output):
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     output.with_suffix(".md").write_text(format_comparison(report), encoding="utf-8")
+    _update_latest_reports(report, output)
 
 
 def _save_batch(batch, output):
@@ -386,7 +424,7 @@ def _save_batch(batch, output):
     for item in batch["orders"]:
         metrics = item.get("model_metrics", {})
         decisions = "; ".join(
-            f"{model.removeprefix('ai-billing-foundry-')}: {item['model_decisions'][model]} "
+            f"{_model_label(model)}: {_billing_status_label(item['model_decisions'][model])} "
             f"(conf: {_metric_text(metrics.get(model, {}).get('confidence'))}, "
             f"sim: {_metric_text(metrics.get(model, {}).get('max_history_similarity'))})"
             for model in model_order
@@ -407,6 +445,7 @@ def _save_batch(batch, output):
                   f"skipped non-JSON blobs: {batch['skipped_non_json_blobs']}.",
                   "Full per-order reports are in the companion orders directory."])
     output.with_suffix(".md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _update_latest_reports(batch, output)
 
 
 def _wait_for_round(previous_start, interval):
@@ -519,7 +558,7 @@ def compare_all_orders(container_client, search_client, embeddings_client, chat_
 
 def main():
     environment = load_environment()
-
+    
     parser = build_argument_parser(environment)
     args = parser.parse_args()
     batch_mode = args.all_orders or not args.blob_name

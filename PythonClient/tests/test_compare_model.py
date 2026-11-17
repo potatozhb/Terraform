@@ -321,6 +321,42 @@ class CompareModelTests(unittest.TestCase):
             self.assertIn("| model-a | success | FREE |", table)
             self.assertIn("All models agree: True", table)
 
+    def test_default_reports_refresh_top_level_files(self):
+        self.client.chat.completions.create.side_effect = [completion(), completion()]
+        report = self.run_comparison()
+        with tempfile.TemporaryDirectory() as folder, patch("compare_model.ROOT", Path(folder)):
+            root = Path(folder)
+            (root / "compare_results.md").write_text("stale")
+            output = root / "results" / "dev" / "compare_results.json"
+            write_reports(report, output)
+            self.assertEqual(json.loads((root / "compare_results.json").read_text(encoding="utf-8")), report)
+            self.assertEqual((root / "compare_results.md").read_text(encoding="utf-8"), output.with_suffix(".md").read_text(encoding="utf-8"))
+            custom = {**report, "order_id": "custom"}
+            write_reports(custom, root / "custom.json")
+            self.assertEqual(json.loads((root / "compare_results.json").read_text(encoding="utf-8")), report)
+
+    def test_batch_latest_copy_preserves_status_and_resolves_order_reports(self):
+        from compare_model import _save_batch
+
+        batch = {"status": "running", "processed_orders": 0, "failed_orders": 0,
+                 "skipped_non_json_blobs": 0, "orders": []}
+        with tempfile.TemporaryDirectory() as folder, patch("compare_model.ROOT", Path(folder)):
+            root = Path(folder)
+            output = root / "results" / "prod" / "compare_results.json"
+            _save_batch(batch, output)
+            self.assertEqual(json.loads((root / "compare_results.json").read_text(encoding="utf-8"))["status"], "running")
+            report_path = "compare_results_orders/run/000001.json"
+            batch.update(status="completed", processed_orders=1, orders=[{
+                "order_id": "123", "status": "success", "model_decisions": {},
+                "all_models_agree": True, "error": None, "report_file": report_path,
+            }])
+            _save_batch(batch, output)
+            latest = json.loads((root / "compare_results.json").read_text(encoding="utf-8"))
+            self.assertEqual(latest["status"], "completed")
+            self.assertEqual(latest["orders"][0]["report_file"], "results/prod/" + report_path)
+            self.assertEqual(batch["orders"][0]["report_file"], report_path)
+            self.assertEqual((root / "compare_results.md").read_text(encoding="utf-8"), output.with_suffix(".md").read_text(encoding="utf-8"))
+
     def make_container(self, names):
         container = Mock()
         container.url = "https://example.blob.core.windows.net/foundry?secret=sas"

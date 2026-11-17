@@ -268,6 +268,11 @@ Batch reports:
   tool-call arguments/results/cache hits/errors, parsed final decisions,
   per-turn and total token usage, latency, and chat/tool call counts.
 
+Default runs also refresh `PythonClient/compare_results.json` and
+`PythonClient/compare_results.md` with the latest run, including batch checkpoints
+and the final status. Environment-specific reports remain in their own directories.
+Custom `--output` destinations do not refresh these top-level copies.
+
 Single-blob mode writes the full report to `results/<env>/compare_results.json`
 and its table to `results/<env>/compare_results.md`. `--output` changes the destination. Completed
 order reports are checkpointed before moving on; listing failures mark the batch

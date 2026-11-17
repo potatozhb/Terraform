@@ -256,7 +256,7 @@ resource "azapi_data_plane_resource" "billing_knowledge_index" {
         filterable          = false
         sortable            = false
         facetable           = false
-        retrievable         = false
+        retrievable         = true
         dimensions          = 1536
         vectorSearchProfile = "vector-profile"
       }

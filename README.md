@@ -69,6 +69,8 @@ Subnet paths above use `resource group / virtual network / subnet`. The environm
 
 Both environments declare chat deployments named `<search-service-name>-foundry-6.1-sol` and `<search-service-name>-foundry-5.6-sol`. The embedding deployment is `text-embedding-3-small-code-vector`, with 1,536-dimensional vectors. These are configuration names from this repository, not confirmation of what is currently deployed in Azure.
 
+The Python comparison defaults use the full dev deployment names, `ai-billing-search-69fe-foundry-6.1-sol` and `ai-billing-search-69fe-foundry-5.6-sol`. Configure `AZURE_OPENAI_COMPARE_DEPLOYMENTS` for the selected environment to override them.
+
 ## Prerequisites
 
 - Terraform `>= 1.7.0, < 2.0.0`. The environment roots require AzureRM `~> 5.0.0` and AzAPI `>= 2.9.0, < 3.0.0`.
@@ -174,6 +176,8 @@ Only `.env.dev` or `.env.prod` is loaded, resolved relative to `PythonClient` re
 
 Create the Search index with Terraform before uploading documents. The uploaders use the existing schema; they do not create it. Order JSON must already be available locally or in the configured Blob container; these scripts do not export orders from SQL.
 
+The index schema declares the 1,536-dimensional `content_vector` field as searchable and retrievable, so queries can return stored vectors when requested.
+
 ### Special billing rules
 
 The supplied catalog is [special_billing_rules.json](PythonClient/data/special_billing_rules.json). Preview the generated documents without Azure calls, then upload with embeddings:
@@ -229,6 +233,8 @@ Or process a limited batch:
 
 Comparison uses three application tools: special-rule retrieval, similar historical-order retrieval, and contract line-item candidate resolution. Rules are mandatory for each model/order; line-item resolution is also mandatory when applicable. Historical similarity informs confidence rather than establishing billing coverage. The comparison does not persist changes to order records.
 
+Line-item resolution skips the first item in each contract's `Items` list, treating it as a placeholder for the contract itself. Remaining candidates must pass the contract-status and service-date checks; the model then evaluates their scope against the work and remarks. Console output identifies each model's tool calls and logs candidate contract item IDs, product names, and service dates.
+
 Configured 6.1 deployment names use the Responses runner; other deployments use the Chat Completions runner. API selection and request options are defined in `compare_model.py`. When adding a differently named deployment, check that mapping as well as its environment setting.
 
 Reports include decisions, evidence/tool conversations, errors, latency, and token usage:
@@ -240,7 +246,11 @@ PythonClient/results/<env>/
   compare_results_orders/<run timestamp>/   # Batch per-order reports
 ```
 
-Use `--output` to change the report destination. Reports may contain order and contract data. Agreement between models is a comparison result, not a validated ground-truth billing decision.
+Runs using the default dev or prod report path also refresh `PythonClient/compare_results.json` and `PythonClient/compare_results.md` with the latest run, including batch checkpoints and final status. These shared copies reflect whichever environment wrote most recently; environment-specific reports remain in their own directories. The copied batch manifest adjusts per-order report paths relative to `PythonClient`.
+
+Terminal and Markdown tables shorten recognized deployment names to labels such as `6.1-sol`, and display `BILLABLE` as `BILL` and `REVIEW_REQUIRED` as `R_R`. JSON reports retain the full deployment names and billing statuses.
+
+Use `--output` to change the report destination. Custom destinations do not refresh the top-level latest-run copies. Reports and candidate logs may contain order and contract data. Agreement between models is a comparison result, not a validated ground-truth billing decision.
 
 ## Function App configuration
 

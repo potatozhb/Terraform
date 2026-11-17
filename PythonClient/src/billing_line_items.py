@@ -71,6 +71,7 @@ def line_item_context(order):
             "is ambiguous, preserve the original IDs and explain why. Never invent an item or change stored data."
         ),
     }
+
     for index, line in enumerate(field(order, "WorkOrderLines", "work_order_lines") or []):
         item_id = field(line, "ContractItemId", "contract_item_id")
         contract_id = field(line, "ContractId", "contract_id")
@@ -96,7 +97,12 @@ def line_item_context(order):
             state = field(contract, "Status", "status")
             if isinstance(state, str) and state.strip().casefold() in {"inactive", "cancelled", "canceled", "expired"}:
                 continue
-            for item in field(contract, "Items", "items") or []:
+
+            for ind, item in enumerate(field(contract, "Items", "items") or []):
+                if ind == 0:
+                    # Skip the first item, which is a placeholder for the contract itself.
+                    continue
+
                 candidate_item_id = field(item, "Id", "ContractItemId", "contract_item_id")
                 if missing_selection(candidate_contract_id) or missing_selection(candidate_item_id):
                     continue
@@ -114,5 +120,7 @@ def line_item_context(order):
                     "content": field(item, "Content", "content"),
                     "coverage": field(item, "Coverages", "coverages"),
                 })
+                print(f"Found candidate contract item {candidate_item_id}, contract item name '{field(item, "ProductName", "product_name")}', service date {service_date}, ")
+                
         entry["status"] = "choose_from_candidates" if entry["candidates"] else "no_date_valid_candidates"
     return result
